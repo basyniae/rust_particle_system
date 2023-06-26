@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use crate::solver::graph::grid_n_d::GridND;
 
 pub mod grid_n_d;
 pub mod erdos_renyi;
@@ -20,4 +21,22 @@ pub trait Graph {
 
     /// Return a hash set of all the neighbors of a particular input point.
     fn get_neighbors(&self, _: u64) -> HashSet<u64>;
+}
+
+pub enum GraphKind {
+    ErdosRenyi,
+    GridND
+}
+
+pub fn graph_constructor(graph_kind: GraphKind, graph_parameters: Vec<u64>) -> Box<dyn Graph> {
+    match graph_kind {
+        GraphKind::GridND => {
+            Box::new(
+                GridND::from(graph_parameters)
+            )
+        }
+        _ => {
+            todo!()
+        }
+    }
 }

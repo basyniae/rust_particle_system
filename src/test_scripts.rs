@@ -1,12 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use crate::solver::graph::Graph;
 use crate::solver::graph::grid_n_d::GridND;
-use crate::solver::ips_rules::contact_process::ContactProcess;
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
 use crate::solver::assemble_initial_condition::{assemble_initial_condition, assemble_random_initial_condition};
-use crate::solver::ips_rules::sir_process::SIRProcess;
-use crate::solver::ips_rules::three_voter_process::ThreeVoterProcess;
-use crate::solver::ips_rules::two_voter_process::TwoVoterProcess;
+use crate::solver::ips_rules::contact_process::ContactProcessStates;
 use crate::visualization::{save_as_gif, save_as_growth_img};
 
 pub fn hello_world() {
@@ -17,8 +14,8 @@ pub fn contact_process_img() {
     let nr_particles = 600;
 
     let initial_condition = assemble_initial_condition(
-        ContactProcess::Susceptible,
-        HashMap::from([(180, ContactProcess::Infected)]),
+        ContactProcessStates::Susceptible,
+        HashMap::from([(180, ContactProcessStates::Infected)]),
         nr_particles,
     );
 

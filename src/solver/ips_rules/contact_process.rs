@@ -1,38 +1,48 @@
-use crate::solver::ips_rules::IPSRules;
+use crate::solver::ips_rules::{IPSRules, IPSStates};
 use std::collections::{HashSet};
 use crate::visualization::{Coloration};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-pub enum ContactProcess {
+pub enum ContactProcessStates {
     Susceptible,
     Infected,
 }
 
-impl IPSRules for ContactProcess {
-    fn all_states() -> HashSet<&'static Self> {
-        HashSet::from([&ContactProcess::Susceptible, &ContactProcess::Infected])
+impl IPSStates for ContactProcessStates {}
+
+pub struct ContactProcessRules {
+    pub birth_rate: f64,
+    pub death_rate: f64,
+}
+
+impl IPSRules<ContactProcessStates> for ContactProcessRules {
+    fn all_states(&self) -> HashSet<&'static ContactProcessStates> {
+        HashSet::from([&ContactProcessStates::Susceptible, &ContactProcessStates::Infected])
     }
 
-    fn get_vacuum_mutation_rate(self: Self, goal: Self) -> f64 {
-        match (self, goal) {
-            (ContactProcess::Infected, ContactProcess::Susceptible) => { 1.0 } // death (1.0)
+    fn get_vacuum_mutation_rate(self, current: ContactProcessStates, goal: ContactProcessStates) -> f64 {
+        match (current, goal) {
+            (ContactProcessStates::Infected,
+                ContactProcessStates::Susceptible) => { self.birth_rate }
             _ => { 0.0 }
         }
     }
 
-    fn get_neighbor_mutation_rate(self: Self, goal: Self, sender: Self) -> f64 {
-        match (self, goal, sender) {
-            (ContactProcess::Susceptible, ContactProcess::Infected, ContactProcess::Infected) => { 1.4 } // birth (1.4)
+    fn get_neighbor_mutation_rate(self, current: ContactProcessStates, goal: ContactProcessStates, sender: ContactProcessStates) -> f64 {
+        match (current, goal, sender) {
+            (ContactProcessStates::Susceptible,
+                ContactProcessStates::Infected,
+                ContactProcessStates::Infected) => { self.death_rate }
             _ => { 0.0 }
         }
     }
 }
 
-impl Coloration for ContactProcess {
+impl Coloration for ContactProcessStates {
     fn get_color(self) -> [u8; 4] {
         match self {
-            ContactProcess::Susceptible => { [0, 0, 0, 255] }
-            ContactProcess::Infected => { [211, 47, 47, 255] }
+            ContactProcessStates::Susceptible => { [0, 0, 0, 255] }
+            ContactProcessStates::Infected => { [211, 47, 47, 255] }
         }
     }
 }

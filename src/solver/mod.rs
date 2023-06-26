@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::rngs::ThreadRng;
 use crate::solver::exponential_distribution::StandardExponential;
 use crate::solver::graph::Graph;
-use crate::solver::ips_rules::IPSRules;
+use crate::solver::ips_rules::{IPSRules, IPSStates};
 
 pub mod ips_rules;
 pub mod graph;
@@ -129,7 +129,8 @@ impl RecordCondition {
 /// // put the output into a pretty gif
 /// save_as_gif(solution, "voter_process.gif", 40, 40, 100)
 /// ```
-pub fn particle_system_solver<S: IPSRules + Eq + Hash + Clone + Copy + 'static + Debug, G: Graph + Debug>(
+pub fn particle_system_solver<R: IPSRules<S>, S: IPSStates + Eq + Hash + Clone + Copy + 'static + Debug, G: Graph + Debug>(
+    ips_rules: R,
     graph: G,
     initial_condition: Vec<S>, // The IPS rules are known from the object type of the initial condition
     halting_condition: HaltCondition,
@@ -140,7 +141,7 @@ pub fn particle_system_solver<S: IPSRules + Eq + Hash + Clone + Copy + 'static +
 
     // Initialize integer-to-state mapping
     let mut int_to_state: Vec<S> = vec![];
-    for s in S::all_states() {
+    for s in ips_rules.all_states() {
         int_to_state.push((*s).clone())
     }
 
@@ -163,7 +164,7 @@ pub fn particle_system_solver<S: IPSRules + Eq + Hash + Clone + Copy + 'static +
         }
         // Pass these counts to the IPS rules object to find the rate
         reactivities.push(
-            states[i as usize].clone().get_reactivity(&neigh_counts)
+            ips_rules.get_reactivity(states[i as usize].clone(), &neigh_counts)
         );
     }
 
@@ -217,22 +218,22 @@ pub fn particle_system_solver<S: IPSRules + Eq + Hash + Clone + Copy + 'static +
 
         // Assemble transition rate distribution (by sampling all states)
         let mut change_rates: Vec<f64> = vec![];
-        for to_state in S::all_states() {
+        for to_state in ips_rules.all_states() {
             change_rates.push(
-                states[update_location as usize].get_mutation_rate(
-                    to_state.clone(),
-                    &neigh_state_counts));
+                ips_rules.get_mutation_rate(states[update_location as usize],
+                                            to_state.clone(),
+                                            &neigh_state_counts));
         }
 
         let distr_to_state = WeightedIndex::new(change_rates).unwrap();
 
         // Sample the distribution we found to get the state to which the particle transitions
-        let goal_state = int_to_state[distr_to_state.sample(&mut rng) as usize].clone();
+        let new_state = int_to_state[distr_to_state.sample(&mut rng) as usize].clone();
 
         // Record previous state our particle was in
         let old_particle_state = (*states.get(update_location as usize).unwrap()).clone();
         // Change old state to new state
-        states[update_location as usize] = goal_state.clone();
+        states[update_location as usize] = new_state.clone();
 
         // Compute own new rate
         // first need the state counts of the neighbors
@@ -243,18 +244,18 @@ pub fn particle_system_solver<S: IPSRules + Eq + Hash + Clone + Copy + 'static +
                 neigh_state_counts.get(&states[*n as usize]).unwrap_or(&0) + 1,
             );
         }
-        reactivities[update_location as usize] = goal_state.get_reactivity(&neigh_state_counts);
+        reactivities[update_location as usize] = ips_rules.get_reactivity(new_state, &neigh_state_counts);
 
 
         // Update surrounding rates & total rate
         for n in &neighs { // for every neighbor of the particle that's being updated
             // Subtract the old spread rate //After some steps we get a floating point error. Doesn't matter, it's linear, but it does panic at negative rates
 
-            let old_spread_rate = states[*n as usize].get_neighbor_reactivity(old_particle_state.clone());
+            let old_spread_rate = ips_rules.get_neighbor_reactivity(states[*n as usize], old_particle_state.clone());
             reactivities[*n as usize] -= old_spread_rate;
             total_reactivity -= old_spread_rate; // (we'll hopefully never get floating point problems with this?)
             // and add the new spread rate
-            let new_spread_rate = states[*n as usize].get_neighbor_reactivity(goal_state.clone());
+            let new_spread_rate = ips_rules.get_neighbor_reactivity(states[*n as usize], new_state.clone());
             reactivities[*n as usize] += new_spread_rate;
             total_reactivity += new_spread_rate;
             if reactivities[*n as usize] < 0.0 { // floating point error safety net
