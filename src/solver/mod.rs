@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::rngs::ThreadRng;
 use crate::solver::exponential_distribution::StandardExponential;
 use crate::solver::graph::Graph;
-use crate::solver::ips_rules::{IPSRules, IPSStates};
+use crate::solver::ips_rules::{IPSRules,};
 
 pub mod ips_rules;
 pub mod graph;
@@ -86,7 +86,7 @@ impl RecordCondition {
 
 /// Interacting particle system simulator. The inputs define a particular particle system, the
 /// output is a record of how that particular particle system might develop (note that this is
-/// nondeterministic).
+/// nondeterministic). TODO: Update
 ///
 /// # Parameters
 /// * `graph`: Graph which defines neighboring states (e.g., line, circle, torus, GridND). Has to
@@ -129,24 +129,24 @@ impl RecordCondition {
 /// // put the output into a pretty gif
 /// save_as_gif(solution, "voter_process.gif", 40, 40, 100)
 /// ```
-pub fn particle_system_solver<R: IPSRules<S>, S: IPSStates + Eq + Hash + Clone + Copy + 'static + Debug, G: Graph + Debug>(
-    ips_rules: R,
+pub fn particle_system_solver<G: Graph + Debug>(
+    ips_rules: Box<dyn IPSRules>,
     graph: G,
-    initial_condition: Vec<S>, // The IPS rules are known from the object type of the initial condition
+    initial_condition: Vec<usize>,
     halting_condition: HaltCondition,
     record_condition: RecordCondition,
     mut rng: ThreadRng,
-) -> Vec<S> {
+) -> Vec<usize> {
     // * PHASE I: Initialization * //
 
     // Initialize integer-to-state mapping
-    let mut int_to_state: Vec<S> = vec![];
+    let mut int_to_state: Vec<usize> = vec![];
     for s in ips_rules.all_states() {
-        int_to_state.push((*s).clone())
+        int_to_state.push(s.clone())
     }
 
     // Initialize state & reactivity vectors
-    let mut states: Vec<S> = initial_condition;
+    let mut states: Vec<usize> = initial_condition;
     assert_eq!(states.len(), graph.nr_points() as usize); // Check if enough information was given in the initial state
 
     let mut reactivities: Vec<f64> = Vec::with_capacity(graph.nr_points() as usize);
@@ -154,7 +154,7 @@ pub fn particle_system_solver<R: IPSRules<S>, S: IPSStates + Eq + Hash + Clone +
     // Compute initial rates
     for i in 0..graph.nr_points() { // Loop over all states
         // Count how many of which neighbor their are, by looping over the neighbors
-        let mut neigh_counts: HashMap<S, u64> = HashMap::new();
+        let mut neigh_counts: HashMap<usize, u64> = HashMap::new();
         for j in graph.get_neighbors(i) {
             let state_j = states.get(j as usize).unwrap();
             neigh_counts.insert(
@@ -206,7 +206,7 @@ pub fn particle_system_solver<R: IPSRules<S>, S: IPSStates + Eq + Hash + Clone +
         // Find out to which state the selected particle transitions
         // Figure out neighbors and their states
         let neighs: HashSet<u64> = graph.get_neighbors(update_location as u64);
-        let mut neigh_state_counts: HashMap<S, u64> = HashMap::new();
+        let mut neigh_state_counts: HashMap<usize, u64> = HashMap::new();
 
         for j in &neighs {
             let state_j = states.get(*j as usize).unwrap();
@@ -237,7 +237,7 @@ pub fn particle_system_solver<R: IPSRules<S>, S: IPSStates + Eq + Hash + Clone +
 
         // Compute own new rate
         // first need the state counts of the neighbors
-        let mut neigh_state_counts: HashMap<S, u64> = HashMap::new();
+        let mut neigh_state_counts: HashMap<usize, u64> = HashMap::new();
         for n in &neighs {
             neigh_state_counts.insert(
                 (*states.get(*n as usize).unwrap()).clone(),
