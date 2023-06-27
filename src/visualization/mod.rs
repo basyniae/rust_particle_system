@@ -1,63 +1,12 @@
 use std::fs::File;
 use image::codecs::gif::{GifEncoder, Repeat};
 use image::{Delay, Frame, ImageBuffer};
-use crate::solver::ips_rules::{IPSKind};
-use crate::solver::ips_rules::contact_process::ContactProcess;
 
 /// Color trait to be implemented on a particle system enum. Implements the `get_color` trait.
 pub trait Coloration {
     /// For the purpose of visualization, which color should the state `self` be represented by?
     /// Returns a `[u8; 4]` in the format `[r,g,b,a]`. Ordinarily we want `a=255`.
-    fn get_color(&self,state: usize) -> [u8; 4];
-}
-
-pub fn coloration_constructor(ips_kind: IPSKind, ips_parameters: Vec<f64>) -> Box<dyn Coloration> {
-    match ips_kind {
-        IPSKind::SIRProcess => {
-            todo!()
-        }
-
-        IPSKind::ContactProcess => {
-            assert_eq!(ips_parameters.len(), 2);
-
-            Box::new(ContactProcess {
-                birth_rate: *ips_parameters.get(0).unwrap(),
-                death_rate: *ips_parameters.get(1).unwrap(),
-            })
-        }
-
-        IPSKind::TwoVoterProcess => {
-            todo!()
-        }
-
-        IPSKind::ThreeVoterProcess => {
-            todo!()
-        }
-    }
-}
-
-pub enum ImgOutputConfig<'a> {
-    GrowthImage {
-        img_name: &'a str,
-        img_x: u32,
-    },
-    GIF {
-        img_name: &'a str,
-        img_x: u32,
-        img_y: u32,
-        ms_per_frame: u32,
-    },
-}
-
-pub fn save_image(coloration: Box<dyn Coloration>, solution: Vec<usize>, config: ImgOutputConfig) {
-    match config {
-        ImgOutputConfig::GrowthImage { img_name, img_x } => {
-            save_as_growth_img(coloration, solution, &img_name, img_x)
-        }
-        ImgOutputConfig::GIF { img_name, img_x, img_y, ms_per_frame } => {
-            save_as_gif(coloration, solution, &img_name, img_x, img_y, ms_per_frame)
-        }
-    }
+    fn get_color(&self, state: usize) -> [u8; 4];
 }
 
 /// Visualize the input solution as a graph over time. Best suited for 1D graphs (lines or circles).

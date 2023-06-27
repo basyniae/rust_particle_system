@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use crate::solver::ips_rules::contact_process::{ContactProcess};
 
 pub mod contact_process;
 
@@ -97,37 +96,5 @@ pub trait IPSRules {
         }
 
         running_rate
-    }
-}
-
-pub enum IPSKind {
-    SIRProcess,
-    ContactProcess,
-    TwoVoterProcess,
-    ThreeVoterProcess,
-}
-
-pub fn ips_rules_constructor(ips_kind: IPSKind, ips_parameters: Vec<f64>) -> Box<dyn IPSRules> {
-    match ips_kind {
-        IPSKind::SIRProcess => {
-            todo!()
-        }
-
-        IPSKind::ContactProcess => {
-            assert_eq!(ips_parameters.len(), 2);
-
-            Box::new(ContactProcess {
-                birth_rate: *ips_parameters.get(0).unwrap(),
-                death_rate: *ips_parameters.get(1).unwrap(),
-            })
-        }
-
-        IPSKind::TwoVoterProcess => {
-            todo!()
-        }
-
-        IPSKind::ThreeVoterProcess => {
-            todo!()
-        }
     }
 }

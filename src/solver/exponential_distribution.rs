@@ -10,7 +10,7 @@ pub struct StandardExponential(pub f64);
 
 impl Distribution<StandardExponential> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> StandardExponential {
-        let unifo: f64 = rng.gen_range(0.0..1.0);
-        StandardExponential(-unifo.ln())
+        let uniform: f64 = rng.gen_range(0.0..1.0);
+        StandardExponential(-uniform.ln())
     }
 }

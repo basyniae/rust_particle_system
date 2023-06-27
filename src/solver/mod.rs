@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::hash::Hash;
 use rand::distributions::{WeightedError, WeightedIndex, Distribution};
 use rand::Rng;
 use rand::rngs::ThreadRng;
@@ -16,18 +15,15 @@ mod exponential_distribution;
 
 /// Enum to be passed into `particle_system_solver` that determines the simulation halting
 /// condition. Implements `HaltCondition::should_continue`.
-/// # Variants
-
-
-
+#[derive(Debug)]
 pub enum HaltCondition {
-    /// TimePassed(f64)`: stop the simulation after a certain amount of time has passed. Physical in
+    /// Stop the simulation after a certain amount of time has passed. Physical in
     /// the sense that an experiment took this amount of time.
     TimePassed(f64),
-    /// `StepsRecorded(u64)`: stop the simulation after a certain amount of steps have been recorded.
+    /// Stop the simulation after a certain amount of steps have been recorded.
     /// Useful for discrete-time particle systems.
     StepsRecorded(u64),
-    /// `StepsTaken(u64)`: stop the simulation after a certain amount of steps have been taken.
+    /// Stop the simulation after a certain amount of steps have been taken.
     /// Useful for discrete-time particle systems.
     StepsTaken(u64),
 }
@@ -56,6 +52,7 @@ impl HaltCondition {
 /// * `EveryNthStep(usize)`: record the state every nth step. Useful for discrete-time particle
 /// systems.
 /// * `Final()`: only record the final state.
+#[derive(Debug)]
 pub enum RecordCondition {
     ConstantTime(f64),
     EveryNthStep(usize),
@@ -86,14 +83,14 @@ impl RecordCondition {
 
 /// Interacting particle system simulator. The inputs define a particular particle system, the
 /// output is a record of how that particular particle system might develop (note that this is
-/// nondeterministic). TODO: Update
+/// nondeterministic).
 ///
 /// # Parameters
+/// * `ips_rules`: Defines the evolution rules of the interaction particle system.
 /// * `graph`: Graph which defines neighboring states (e.g., line, circle, torus, GridND). Has to
 /// implement `Graph` trait.
-/// * `initial_condition`: Vector containing the initial states of the particles. The type of the
-/// particles define the rules for the interacting particle system (e.g., contact process, voter
-/// process).
+/// * `initial_condition`: Vector containing the initial states of the particles. States are
+/// represented by integers, if applicable, 0 is the default state.
 /// * `halting_condition`: HaltCondition enum which determines under what conditions the simulation
 /// halts (e.g., stop after 10.0 time units, or 20 steps have been recorded).
 /// * `record_condition`: RecordCondition enum which determines under what conditions the state
@@ -129,9 +126,9 @@ impl RecordCondition {
 /// // put the output into a pretty gif
 /// save_as_gif(solution, "voter_process.gif", 40, 40, 100)
 /// ```
-pub fn particle_system_solver<G: Graph + Debug>(
+pub fn particle_system_solver(
     ips_rules: Box<dyn IPSRules>,
-    graph: G,
+    graph: Box<dyn Graph>,
     initial_condition: Vec<usize>,
     halting_condition: HaltCondition,
     record_condition: RecordCondition,
@@ -225,7 +222,11 @@ pub fn particle_system_solver<G: Graph + Debug>(
                                             &neigh_state_counts));
         }
 
-        let distr_to_state = WeightedIndex::new(change_rates).unwrap();
+        let distr_to_state = match WeightedIndex::new(change_rates) {
+            Ok(distribution) => { distribution }
+            Err(WeightedError::AllWeightsZero) => { break }
+            Err(other) => {panic!("Strange error! {:?}", other)}
+        };
 
         // Sample the distribution we found to get the state to which the particle transitions
         let new_state = int_to_state[distr_to_state.sample(&mut rng) as usize].clone();
