@@ -126,4 +126,36 @@ impl Graph for GridND {
 
         neighbors
     }
+
+    fn describe(&self) {
+        match self.dimensions.len() {
+            0 => {
+                panic!("Wrongly constructed grid graph!")
+            }
+            1 => {
+                if self.glue[0] {
+                    println!("Circle graph with {} points.", self.dimensions[0])
+                }
+            }
+            2 => {
+                if self.glue[0] && self.glue[1] {
+                    println!("2D toroidal graph, of size {}x{}.",
+                             self.dimensions[0], self.dimensions[1])
+                } else if self.glue[0] {
+                    println!("2D cylinder graph, where the first dimension is cyclic, of size {}x{}",
+                             self.dimensions[0], self.dimensions[1])
+                } else if self.glue[1] {
+                    println!("2D cylinder graph, where the second dimension is cyclic, of size {}x{}",
+                             self.dimensions[0], self.dimensions[1])
+                } else {
+                    println!("Rectangular graph, of size {}x{}",
+                             self.dimensions[0], self.dimensions[1])
+                }
+            }
+            _ => {
+                println!("General {}D grid graph, glued at {:?}, of size {:?}", self.dimensions.len(),
+                         self.glue, self.dimensions)
+            }
+        }
+    }
 }

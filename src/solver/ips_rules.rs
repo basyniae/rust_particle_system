@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 pub mod contact_process;
+pub mod voter_process;
 
 /// Trait encoding the rules for the evolution of an interacting particle system.
 /// To be implemented on an enum.
@@ -97,4 +98,6 @@ pub trait IPSRules {
 
         running_rate
     }
+
+    fn describe(&self);
 }

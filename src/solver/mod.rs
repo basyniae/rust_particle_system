@@ -98,10 +98,15 @@ impl RecordCondition {
 /// unit).
 /// * `rng`: ThreadRng input. Most likely you want to input `rand::thread_rng()`.
 ///
-/// # Output
-/// A vector which contains snapshots of the particle system at different times. If `n` steps have
+/// # Outputs
+/// A tuple consisting of
+/// * A vector which contains snapshots of the particle system at different times. If `n` steps have
 /// been recorded of a system with `x` particles, the length of the output vector is `nx`. The `i`th
 /// snapshot (`0 <= i <= n`) can be found at indices `ix` to `(i+1)x-1`.
+/// * A vector containing only the final state, in the format above.
+/// * The total simulated time (f64)
+/// * The total number of steps recorded (u64)
+/// * The total number of steps simulated (u64)
 ///
 /// # Example
 /// Simulate the two voter process for 100.0 time units on a 40x40 toroidal grid, with random
@@ -114,8 +119,15 @@ impl RecordCondition {
 ///     40 * 40,
 /// );
 ///
-/// // run the simulation
+/// // make the particle system
+/// let ips_rules = Box::new(
+///         Two
+///
+/// // run the simulation TODO: Update example
 /// let solution = particle_system_solver(
+///     Box::new(
+///
+///     ),
 ///     GridND::from(vec![40, 40]),
 ///     initial_condition,
 ///     HaltCondition::TimePassed(100.0),
@@ -133,7 +145,7 @@ pub fn particle_system_solver(
     halting_condition: HaltCondition,
     record_condition: RecordCondition,
     mut rng: ThreadRng,
-) -> Vec<usize> {
+) -> (Vec<usize>, Vec<usize>, f64, u64, u64) {
     // * PHASE I: Initialization * //
 
     // Initialize integer-to-state mapping
@@ -291,5 +303,5 @@ pub fn particle_system_solver(
         states_record.append(&mut states.clone());
     }
 
-    states_record
+    (states_record, states, time_passed, steps_recorded, steps_taken)
 }

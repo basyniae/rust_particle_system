@@ -26,6 +26,10 @@ impl IPSRules for ContactProcess {
             _ => { 0.0 }
         }
     }
+
+    fn describe(&self) {
+        println!("Contact process with birth rate {} and death rate {}.", self.birth_rate, self.death_rate)
+    }
 }
 
 impl Coloration for ContactProcess {

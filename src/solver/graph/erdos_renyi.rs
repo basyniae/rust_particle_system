@@ -13,4 +13,8 @@ impl Graph for ErdosRenyi {
     fn get_neighbors(&self, _: u64) -> HashSet<u64> {
         todo!()
     }
+
+    fn describe(&self) {
+        todo!()
+    }
 }

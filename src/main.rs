@@ -16,13 +16,13 @@ fn main() {
     let matches = command!("cmd")
         // Select graph
         .arg(arg!(--"graph-grid-nd" <DIMENSIONS>).required(false)
-            .help("n-dimensional grid. Specify dimensions.")
+            .help("Run particle system on an n-dimensional grid. Specify dimensions.")
             .min_values(1)
             .multiple_values(true)
             .value_parser(value_parser!(u64))
             .validator(|s| s.parse::<u64>()))
         .arg(arg!(--"graph-erdos-renyi" <DIMENSIONS_AND_COUNT>).required(false)
-            .help("Erdos-Renyi graph. Specify dimensions and average nr of neighbours per particle.")
+            .help("Run particle system on an Erdos-Renyi graph. Specify dimensions and average nr of neighbours per particle.")
             .min_values(2)
             .max_values(2)
             .multiple_values(true))
@@ -37,16 +37,18 @@ fn main() {
             .max_values(2)
             .value_parser(value_parser!(f64))
             .validator(|s| s.parse::<f64>()))
-        .arg(arg!(--"ips-sir-process" <SIR_PARAMS>)
-            .help("unimplemented"))
+        .arg(arg!(--"ips-sir-process" <BIRTH_AND_DEATH_RATE>)
+            .help("unimplemented Susceptible-Infected-Removed process. Specify birth and death \
+            rates"))
         .group(ArgGroup::new("ips-kind")
             .args(&["ips-contact-process", "ips-sir-process"])
             .required(true))
         // Select initial condition
         .arg(arg!(--"initial-random").required(false)
-            .help("Start with random initial condition"))
+            .help("Start with random initial condition, where each state has equal probability."))
         .arg(arg!(--"initial-different-particles" <DIFFERENT_AND_PARTICLES>).required(false)
-            .help("Start with a list of specified different particles. The other particles will be in the state 0.")
+            .help("Start with a list of specified different particles. The other particles \
+            will be in the state 0.")
             .min_values(2)
             .value_parser(value_parser!(usize)))
         .group(ArgGroup::new("initial-kind")
@@ -54,29 +56,37 @@ fn main() {
             .required(true))
         // Select halting condition
         .arg(arg!(--"halt-time-passed" <TIME_PASSED>).required(false)
+            .help("Stop simulation after a certain specified amount of time as passed.")
             .value_parser(value_parser!(f64))
             .validator(|s| s.parse::<f64>()))
         .arg(arg!(--"halt-steps-recorded" <STEPS>).required(false)
+            .help("Stop simulation after a certain specified number of steps have been recorded.")
             .value_parser(value_parser!(u64))
             .validator(|s| s.parse::<u64>()))
         .arg(arg!(--"halt-steps-taken" <STEPS>).required(false)
+            .help("Stop simulation after a certain specified number of steps have been taken.")
             .value_parser(value_parser!(u64))
             .validator(|s| s.parse::<u64>()))
         .group(ArgGroup::new("halt-kind")
             .args(&["halt-time-passed", "halt-steps-recorded", "halt-steps-taken"])
             .required(true))
         // Select record condition
-        .arg(arg!(--"record-final").required(false))
+        .arg(arg!(--"record-final").required(false)
+            .help("Only record the final state."))
         .arg(arg!(--"record-nth-step" <STEP>).required(false)
+            .help("Record every nth step.")
             .value_parser(value_parser!(usize)))
         .arg(arg!(--"record-constant-time" <TIME>).required(false)
+            .help("Record state at every whole multiple of  the specified time.")
             .value_parser(value_parser!(f64)))
         .group(ArgGroup::new("record-kind")
             .args(&["record-final", "record-nth-step", "record-constant-time"])
             .required(true))
         // Select output kind
-        .arg(arg!(--"image-growth").required(false))
+        .arg(arg!(--"image-growth").required(false)
+            .help("Record output of growth-image type. The output file name must end in .png."))
         .arg(arg!(--"image-gif" <IMG_Y_AND_MS_PER_FRAME>).required(false)
+            .help("Record output as a gif. The output file name must end in .gif.")
             .min_values(2)
             .max_values(2)
             .value_parser(value_parser!(u32)))
@@ -84,7 +94,8 @@ fn main() {
             .args(&["image-growth", "image-gif"])
             .required(true))
         // Set output file name
-        .arg(arg!(--"output" <FILE_NAME>).required(true))
+        .arg(arg!(--"output" <FILE_NAME>).required(true)
+            .help("File output name."))
 
         .get_matches();
 
@@ -113,6 +124,8 @@ fn main() {
         panic!("Graph not recognized!");
     }
 
+    println!("Graph:");
+    graph.describe(); // Print pretty statistics of the selected graph
     let graph_nr_points = graph.nr_points();
 
     // Load up default values for ips rules
@@ -139,6 +152,10 @@ fn main() {
     } else {
         panic!("No other processes implemented")
     }
+
+    println!("Interacting particle system:");
+    ips_rules.describe();
+    println!("");
 
     // Load up default initial condition
     let initial_condition: Vec<usize>;
@@ -201,7 +218,8 @@ fn main() {
     /* Run simulation */
     let now = Instant::now();
 
-    let solution = particle_system_solver(
+    let (solution, final_state, time_simulated, steps_recorded, steps_taken)
+        = particle_system_solver(
         ips_rules,
         graph,
         initial_condition,
@@ -211,7 +229,18 @@ fn main() {
     );
 
     let elapsed = now.elapsed();
-    println!("Simulation time: {:.2?}", elapsed);
+
+    /* Give some statistics of the simulation */
+    println!("Thought for {:.2?}.", elapsed);
+    println!("Simulated {:.2?} time units, in which {} steps were taken, and {} were recorded.",
+             time_simulated, steps_taken, steps_recorded);
+    let mut state_counts: HashMap<usize, usize> = HashMap::new();
+    for particle_state in final_state {
+        state_counts.insert(particle_state, state_counts.get(&particle_state).unwrap_or(&0usize) + 1);
+    }
+
+    /* Give some statistics of the final state */
+    println!("The final state has the following counts: {:?}.", state_counts);
 
     /* Pack simulation into image */
     if matches.is_present("image-growth") {
