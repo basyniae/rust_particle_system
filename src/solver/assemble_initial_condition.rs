@@ -18,9 +18,8 @@ pub fn assemble_initial_condition(fill: usize, different: HashMap<u64, usize>, g
 /// Make an initial condition of the appropriate size `grid_size` by sampling from a distribution.
 /// A random entry from the hash set `states` will be chosen. Weights can be assigned by repeating a
 /// particular state in the `states` vector.
-pub fn assemble_random_initial_condition(states: HashSet<usize>, grid_size: u64) -> Vec<usize> {
+pub fn assemble_random_initial_condition(states: Vec<usize>, grid_size: u64) -> Vec<usize> {
     let mut rng = rand::thread_rng();
-    let states: Vec<usize> = states.into_iter().collect();
 
     let mut initial_condition: Vec<usize> = Vec::new();
 

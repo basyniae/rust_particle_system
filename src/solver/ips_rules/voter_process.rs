@@ -7,9 +7,8 @@ pub struct VoterProcess {
 }
 
 impl IPSRules for VoterProcess {
-    fn all_states(&self) -> HashSet<usize> {
-        let vec: Vec<usize> = (0..self.nr_parties).collect();
-        HashSet::from_iter(vec.iter().cloned())
+    fn all_states(&self) -> Vec<usize> {
+        (0..self.nr_parties).collect()
     }
 
     fn get_vacuum_mutation_rate(&self, _: usize, _: usize) -> f64 {

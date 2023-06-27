@@ -9,8 +9,8 @@ pub struct ContactProcess {
 }
 
 impl IPSRules for ContactProcess {
-    fn all_states(&self) -> HashSet<usize> {
-        HashSet::from([0, 1])
+    fn all_states(&self) -> Vec<usize> {
+        vec![0, 1]
     }
 
     fn get_vacuum_mutation_rate(&self, current: usize, goal: usize) -> f64 {

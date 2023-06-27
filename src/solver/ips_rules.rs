@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 pub mod contact_process;
 pub mod voter_process;
+pub mod two_si_model;
 
 /// Trait encoding the rules for the evolution of an interacting particle system.
 /// To be implemented on an enum.
@@ -18,7 +19,7 @@ pub trait IPSRules {
     /// Return a hash set of all the states in the system, i.e., all variants of the enum..
     ///
     /// Overwrite for each system.
-    fn all_states(&self) -> HashSet<usize>;
+    fn all_states(&self) -> Vec<usize>;
 
     /// Returns the rate at which a particle in a given state `self` changes to the state `goal`
     /// in vacuum, meaning without any neighbors influencing it.

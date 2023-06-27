@@ -7,6 +7,7 @@ use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
 use crate::solver::graph::grid_n_d::GridND;
 use crate::solver::ips_rules::contact_process::ContactProcess;
+use crate::solver::ips_rules::two_si_model::TwoSIModel;
 use crate::solver::ips_rules::voter_process::VoterProcess;
 use crate::visualization::{Coloration, save_as_gif, save_as_growth_img};
 
@@ -44,8 +45,15 @@ fn main() {
         .arg(arg!(--"ips-voter-process" <NR_PARTIES>)
             .help("Voter process (competitive) on the specified number of parties (i.e., states).")
             .value_parser(value_parser!(usize)))
+        .arg(arg!(--"ips-two-si-model" <BIRTH_AND_DEATH_AND_COMPETE_RATE>)
+            .help("SI model with two identical invasive species (states 1 and 2), competing indirectly \
+        via the available space, and directly via conversion (i.e., combat).")
+            .min_values(3)
+            .max_values(3)
+            .value_parser(value_parser!(f64))
+            .validator(|s| s.parse::<f64>()))
         .group(ArgGroup::new("ips-kind")
-            .args(&["ips-contact-process", "ips-sir-process", "ips-voter-process"])
+            .args(&["ips-contact-process", "ips-sir-process", "ips-voter-process", "ips-two-si-model"])
             .required(true))
         // Select initial condition
         .arg(arg!(--"initial-random").required(false)
@@ -140,8 +148,8 @@ fn main() {
     if matches.is_present("ips-contact-process") {
         let mut values = matches.get_many::<f64>("ips-contact-process").unwrap();
         assert_eq!(values.len(), 2); // raise argument error
-        let birth_rate = *values.next().unwrap(); // birth rate
-        let death_rate = *values.next().unwrap(); // death rate
+        let birth_rate = *values.next().unwrap();
+        let death_rate = *values.next().unwrap();
 
         coloration = Box::new(ContactProcess {
             birth_rate,
@@ -165,6 +173,24 @@ fn main() {
         ips_rules = Box::new(VoterProcess {
             nr_parties,
             change_rate: 1.0,
+        });
+    } else if matches.is_present("ips-two-si-model") {
+        let mut values = matches.get_many::<f64>("ips-two-si-model").unwrap();
+        assert_eq!(values.len(), 3); // raise argument error
+        let birth_rate = *values.next().unwrap();
+        let death_rate = *values.next().unwrap();
+        let compete_rate = *values.next().unwrap();
+
+        coloration = Box::new(TwoSIModel {
+            birth_rate,
+            death_rate,
+            compete_rate,
+        });
+
+        ips_rules = Box::new(TwoSIModel {
+            birth_rate,
+            death_rate,
+            compete_rate,
         });
     } else {
         panic!("No other processes implemented")

@@ -180,7 +180,8 @@ pub fn particle_system_solver(
     // Initialize the total rate
     let mut total_reactivity: f64 = reactivities.iter().sum();
     // Initialize state record
-    let mut states_record = states.clone();
+    let mut states_record: Vec<usize> = vec![]; // Needs to be empty, the first state is already
+    // recorded by the process
 
     // Initialize timekeeping
     let mut time_passed = 0.0;
@@ -199,6 +200,8 @@ pub fn particle_system_solver(
     // * PHASE 2: Simulation loop * //
     while halting_condition.should_continue(time_passed, steps_recorded, steps_taken) {
         steps_taken += 1;
+        println!();
+        println!("states: {:?}", states);
         let prev_state = states.clone();
 
         // Generate time step (until next event)
@@ -211,6 +214,7 @@ pub fn particle_system_solver(
 
         // Find place where update occurs
         let update_location = distr_location.sample(&mut rng) as u64; // Sample the distribution
+        println!("Update occurs at {update_location}");
 
         // Find out to which state the selected particle transitions
         // Figure out neighbors and their states
@@ -227,21 +231,25 @@ pub fn particle_system_solver(
 
         // Assemble transition rate distribution (by sampling all states)
         let mut change_rates: Vec<f64> = vec![];
-        for to_state in ips_rules.all_states() {
+        for to_state in ips_rules.all_states() { // This is an unordered hash set! Can't rely on pushing order.
             change_rates.push(
                 ips_rules.get_mutation_rate(states[update_location as usize],
                                             to_state.clone(),
                                             &neigh_state_counts));
         }
 
+        println!("Change rates: {:?}", change_rates);
+
         let distr_to_state = match WeightedIndex::new(change_rates) {
             Ok(distribution) => { distribution }
             Err(WeightedError::AllWeightsZero) => { break }
             Err(other) => {panic!("Strange error! {:?}", other)}
         };
+        println!("Distr to state: {:?}", distr_to_state);
 
         // Sample the distribution we found to get the state to which the particle transitions
         let new_state = int_to_state[distr_to_state.sample(&mut rng) as usize].clone();
+        println!("New state: {new_state}");
 
         // Record previous state our particle was in
         let old_particle_state = (*states.get(update_location as usize).unwrap()).clone();
