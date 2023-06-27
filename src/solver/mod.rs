@@ -257,7 +257,9 @@ pub fn particle_system_solver(
                 neigh_state_counts.get(&states[*n as usize]).unwrap_or(&0) + 1,
             );
         }
+        total_reactivity -= reactivities[update_location as usize]; // Need to update total rate as well
         reactivities[update_location as usize] = ips_rules.get_reactivity(new_state, &neigh_state_counts);
+        total_reactivity += reactivities[update_location as usize];
 
 
         // Update surrounding rates & total rate

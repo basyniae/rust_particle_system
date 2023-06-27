@@ -7,6 +7,7 @@ use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
 use crate::solver::graph::grid_n_d::GridND;
 use crate::solver::ips_rules::contact_process::ContactProcess;
+use crate::solver::ips_rules::voter_process::VoterProcess;
 use crate::visualization::{Coloration, save_as_gif, save_as_growth_img};
 
 pub mod visualization;
@@ -40,8 +41,11 @@ fn main() {
         .arg(arg!(--"ips-sir-process" <BIRTH_AND_DEATH_RATE>)
             .help("unimplemented Susceptible-Infected-Removed process. Specify birth and death \
             rates"))
+        .arg(arg!(--"ips-voter-process" <NR_PARTIES>)
+            .help("Voter process (competitive) on the specified number of parties (i.e., states).")
+            .value_parser(value_parser!(usize)))
         .group(ArgGroup::new("ips-kind")
-            .args(&["ips-contact-process", "ips-sir-process"])
+            .args(&["ips-contact-process", "ips-sir-process", "ips-voter-process"])
             .required(true))
         // Select initial condition
         .arg(arg!(--"initial-random").required(false)
@@ -134,28 +138,41 @@ fn main() {
 
     // Make ips from provided arguments
     if matches.is_present("ips-contact-process") {
-        let mut contact_process_parameters: Vec<f64> = vec![];
         let mut values = matches.get_many::<f64>("ips-contact-process").unwrap();
         assert_eq!(values.len(), 2); // raise argument error
-        contact_process_parameters.push(*values.next().unwrap()); // birth rate
-        contact_process_parameters.push(*values.next().unwrap()); // death rate
+        let birth_rate = *values.next().unwrap(); // birth rate
+        let death_rate = *values.next().unwrap(); // death rate
 
         coloration = Box::new(ContactProcess {
-            birth_rate: *contact_process_parameters.get(0).unwrap(),
-            death_rate: *contact_process_parameters.get(1).unwrap(),
+            birth_rate,
+            death_rate,
         });
 
         ips_rules = Box::new(ContactProcess {
-            birth_rate: *contact_process_parameters.get(0).unwrap(),
-            death_rate: *contact_process_parameters.get(1).unwrap(),
-        })
+            birth_rate,
+            death_rate,
+        });
+    } else if matches.is_present("ips-voter-process") {
+        let nr_parties = *matches.get_one::<usize>("ips-voter-process").unwrap();
+
+        coloration = Box::new(VoterProcess {
+            nr_parties,
+            change_rate: 1.0, // With this setup, we can't have two parameters of different types
+            // in the same process; nr_parties being a usize excludes the possibility to parameterize
+            // change_rate (a f64)
+        });
+
+        ips_rules = Box::new(VoterProcess {
+            nr_parties,
+            change_rate: 1.0,
+        });
     } else {
         panic!("No other processes implemented")
     }
 
     println!("Interacting particle system:");
     ips_rules.describe();
-    println!("");
+    println!();
 
     // Load up default initial condition
     let initial_condition: Vec<usize>;
