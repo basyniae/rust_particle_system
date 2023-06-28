@@ -192,6 +192,7 @@ pub fn particle_system_solver(
     let mut distr_location = match WeightedIndex::new(&reactivities) {
         Ok(distribution) => distribution,
         Err(e) => {
+            println!("The states are {:?}", states);
             println!("The rates are {:?}", reactivities);
             panic!("Problem assembling location distribution: {:?}", e)
         }

@@ -5,6 +5,7 @@ use crate::solver::assemble_initial_condition::{assemble_initial_condition, asse
 use crate::solver::graph::{Graph};
 use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
+use crate::solver::graph::erdos_renyi::ErdosRenyi;
 use crate::solver::graph::grid_n_d::GridND;
 use crate::solver::ips_rules::si_process::SIProcess;
 use crate::solver::ips_rules::sir_process::SIRProcess;
@@ -25,9 +26,12 @@ fn main() {
             .value_parser(value_parser!(u64))
             .validator(|s| s.parse::<u64>()))
         .arg(arg!(--"graph-erdos-renyi" <DIMENSIONS_AND_COUNT>).required(false)
-            .help("Run particle system on an Erdos-Renyi graph. Specify dimensions and average nr of neighbours per particle.")
+            .help("Run particle system on an Erdos-Renyi graph. Specify dimensions and average \
+            number of neighbours per particle.")
             .min_values(2)
             .max_values(2)
+            .value_parser(value_parser!(u64))
+            .validator(|s| s.parse::<u64>())
             .multiple_values(true))
         .group(ArgGroup::new("graph-kind")
             .args(&["graph-grid-nd", "graph-erdos-renyi"])
@@ -127,6 +131,7 @@ fn main() {
     let graph: Box<dyn Graph>;
 
     if matches.is_present("graph-grid-nd") {
+
         let values = matches.get_many::<u64>("graph-grid-nd").unwrap();
 
         let mut grid_dimensions = vec![];
@@ -139,9 +144,20 @@ fn main() {
         graph = Box::new(
             GridND::from((grid_dimensions, grid_glue))
         )
+
     } else if matches.is_present("graph-erdos-renyi") {
-        // graph_kind = GraphKind::ErdosRenyi;
-        panic!("Erdos-Renyi graph not implemented")
+
+        let mut values = matches.get_many::<u64>("graph-erdos-renyi").unwrap();
+
+        let nr_points = values.next().unwrap();
+        let avg_nr_neighs = values.next().unwrap();
+
+        // The probability that 2 points are connected is related to the avg number of neighbours,
+        //  the first of which is noninteger, the second of which might be
+        graph = Box::new(
+            ErdosRenyi::new(*nr_points, *avg_nr_neighs as f64 / *nr_points as f64, rand::thread_rng())
+        )
+
     } else {
         panic!("Graph not recognized!");
     }
@@ -217,7 +233,6 @@ fn main() {
             birth_rate,
             death_rate,
         });
-
     } else {
         panic!("No other processes implemented")
     }
