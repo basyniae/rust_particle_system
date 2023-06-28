@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use crate::{Coloration, IPSRules};
 
 pub struct VoterProcess {

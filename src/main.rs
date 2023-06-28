@@ -6,8 +6,9 @@ use crate::solver::graph::{Graph};
 use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
 use crate::solver::graph::grid_n_d::GridND;
-use crate::solver::ips_rules::contact_process::ContactProcess;
-use crate::solver::ips_rules::two_si_model::TwoSIModel;
+use crate::solver::ips_rules::si_process::SIProcess;
+use crate::solver::ips_rules::sir_process::SIRProcess;
+use crate::solver::ips_rules::two_si_process::TwoSIProcess;
 use crate::solver::ips_rules::voter_process::VoterProcess;
 use crate::visualization::{Coloration, save_as_gif, save_as_growth_img};
 
@@ -33,27 +34,36 @@ fn main() {
             .required(true)
         )
         // Select IPS
-        .arg(arg!(--"ips-contact-process" <BIRTH_AND_DEATH_RATE>).required(false)
-            .help("Contact process, specify birth and death rates.")
+        .arg(arg!(--"ips-si" <BIRTH_AND_DEATH_RATE>).required(false)
+            .help("Susceptible-Infected (aka contact) process, specify birth and death rates.")
             .min_values(2)
             .max_values(2)
             .value_parser(value_parser!(f64))
             .validator(|s| s.parse::<f64>()))
-        .arg(arg!(--"ips-sir-process" <BIRTH_AND_DEATH_RATE>)
-            .help("unimplemented Susceptible-Infected-Removed process. Specify birth and death \
-            rates"))
-        .arg(arg!(--"ips-voter-process" <NR_PARTIES>)
+        .arg(arg!(--"ips-voter" <NR_PARTIES>)
             .help("Voter process (competitive) on the specified number of parties (i.e., states).")
             .value_parser(value_parser!(usize)))
-        .arg(arg!(--"ips-two-si-model" <BIRTH_AND_DEATH_AND_COMPETE_RATE>)
-            .help("SI model with two identical invasive species (states 1 and 2), competing indirectly \
+        .arg(arg!(--"ips-two-si" <BIRTH_AND_DEATH_AND_COMPETE_RATE>)
+            .help("Susceptible-infected process with two identical invasive species (states 1 and 2), competing indirectly \
         via the available space, and directly via conversion (i.e., combat).")
             .min_values(3)
             .max_values(3)
             .value_parser(value_parser!(f64))
             .validator(|s| s.parse::<f64>()))
+        .arg(arg!(--"ips-sir" <BIRTH_AND_DEATH_RATE>).required(false)
+            .help("Susceptible-infected-removed process, specify birth and death rates.")
+            .min_values(2)
+            .max_values(2)
+            .value_parser(value_parser!(f64))
+            .validator(|s| s.parse::<f64>()))
         .group(ArgGroup::new("ips-kind")
-            .args(&["ips-contact-process", "ips-sir-process", "ips-voter-process", "ips-two-si-model"])
+            .args(&[
+                "ips-si",
+                "ips-sir",
+                "ips-voter",
+                "ips-two-si",
+                "ips-sir"
+            ])
             .required(true))
         // Select initial condition
         .arg(arg!(--"initial-random").required(false)
@@ -145,23 +155,23 @@ fn main() {
     let coloration: Box<dyn Coloration>;
 
     // Make ips from provided arguments
-    if matches.is_present("ips-contact-process") {
-        let mut values = matches.get_many::<f64>("ips-contact-process").unwrap();
+    if matches.is_present("ips-si") {
+        let mut values = matches.get_many::<f64>("ips-si").unwrap();
         assert_eq!(values.len(), 2); // raise argument error
         let birth_rate = *values.next().unwrap();
         let death_rate = *values.next().unwrap();
 
-        coloration = Box::new(ContactProcess {
+        coloration = Box::new(SIProcess {
             birth_rate,
             death_rate,
         });
 
-        ips_rules = Box::new(ContactProcess {
+        ips_rules = Box::new(SIProcess {
             birth_rate,
             death_rate,
         });
-    } else if matches.is_present("ips-voter-process") {
-        let nr_parties = *matches.get_one::<usize>("ips-voter-process").unwrap();
+    } else if matches.is_present("ips-voter") {
+        let nr_parties = *matches.get_one::<usize>("ips-voter").unwrap();
 
         coloration = Box::new(VoterProcess {
             nr_parties,
@@ -174,24 +184,40 @@ fn main() {
             nr_parties,
             change_rate: 1.0,
         });
-    } else if matches.is_present("ips-two-si-model") {
-        let mut values = matches.get_many::<f64>("ips-two-si-model").unwrap();
+    } else if matches.is_present("ips-two-si") {
+        let mut values = matches.get_many::<f64>("ips-two-si").unwrap();
         assert_eq!(values.len(), 3); // raise argument error
         let birth_rate = *values.next().unwrap();
         let death_rate = *values.next().unwrap();
         let compete_rate = *values.next().unwrap();
 
-        coloration = Box::new(TwoSIModel {
+        coloration = Box::new(TwoSIProcess {
             birth_rate,
             death_rate,
             compete_rate,
         });
 
-        ips_rules = Box::new(TwoSIModel {
+        ips_rules = Box::new(TwoSIProcess {
             birth_rate,
             death_rate,
             compete_rate,
         });
+    } else if matches.is_present("ips-sir") {
+        let mut values = matches.get_many::<f64>("ips-sir").unwrap();
+        assert_eq!(values.len(), 2); // raise argument error
+        let birth_rate = *values.next().unwrap();
+        let death_rate = *values.next().unwrap();
+
+        coloration = Box::new(SIRProcess {
+            birth_rate,
+            death_rate,
+        });
+
+        ips_rules = Box::new(SIRProcess {
+            birth_rate,
+            death_rate,
+        });
+
     } else {
         panic!("No other processes implemented")
     }

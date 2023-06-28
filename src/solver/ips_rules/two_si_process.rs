@@ -1,13 +1,13 @@
 use crate::{Coloration, IPSRules};
 
 // 0: no party (neutral), 1: first party, 2: second party
-pub struct TwoSIModel {
+pub struct TwoSIProcess {
     pub birth_rate: f64,
     pub death_rate: f64,
     pub compete_rate: f64,
 }
 
-impl IPSRules for TwoSIModel {
+impl IPSRules for TwoSIProcess {
     fn all_states(&self) -> Vec<usize> {
         vec![0, 1, 2]
     }
@@ -39,7 +39,7 @@ impl IPSRules for TwoSIModel {
     }
 }
 
-impl Coloration for TwoSIModel {
+impl Coloration for TwoSIProcess {
     fn get_color(&self, state: usize) -> [u8; 4] {
         match state {
             0 => { [0, 0, 0, 255] }

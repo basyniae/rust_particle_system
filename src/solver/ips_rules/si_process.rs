@@ -1,14 +1,13 @@
 use crate::solver::ips_rules::{IPSRules,};
-use std::collections::{HashSet};
 use crate::visualization::{Coloration};
 
 // 0: Susceptible, 1: Infected
-pub struct ContactProcess {
+pub struct SIProcess {
     pub death_rate: f64,
     pub birth_rate: f64,
 }
 
-impl IPSRules for ContactProcess {
+impl IPSRules for SIProcess {
     fn all_states(&self) -> Vec<usize> {
         vec![0, 1]
     }
@@ -28,11 +27,12 @@ impl IPSRules for ContactProcess {
     }
 
     fn describe(&self) {
-        println!("Contact process with birth rate {} and death rate {}.", self.birth_rate, self.death_rate)
+        println!("Susceptible-Infected (aka contact) process with birth rate {} and death rate {}.",
+                 self.birth_rate, self.death_rate)
     }
 }
 
-impl Coloration for ContactProcess {
+impl Coloration for SIProcess {
     fn get_color(&self, state: usize) -> [u8; 4] {
         if state == 0 { // susceptible
             [0, 0, 0, 255]

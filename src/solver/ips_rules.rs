@@ -1,8 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
-pub mod contact_process;
+pub mod si_process;
 pub mod voter_process;
-pub mod two_si_model;
+pub mod two_si_process;
+pub mod sir_process;
 
 /// Trait encoding the rules for the evolution of an interacting particle system.
 /// To be implemented on an enum.

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use rand::seq::SliceRandom;
 
 /// Make an initial condition of the appropriate size `grid_size` from prescribed data.
