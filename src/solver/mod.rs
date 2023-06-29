@@ -163,12 +163,12 @@ pub fn particle_system_solver(
     // Compute initial rates
     for i in 0..graph.nr_points() { // Loop over all states
         // Count how many of which neighbor their are, by looping over the neighbors
-        let mut neigh_counts: HashMap<usize, u64> = HashMap::new();
+        let mut neigh_counts: HashMap<usize, usize> = HashMap::new();
         for j in graph.get_neighbors(i) {
             let state_j = states.get(j as usize).unwrap();
             neigh_counts.insert(
                 state_j.clone(),
-                neigh_counts.get(state_j).unwrap_or(&0u64) + 1,
+                neigh_counts.get(state_j).unwrap_or(&0usize) + 1,
             );
         }
         // Pass these counts to the IPS rules object to find the rate
@@ -214,19 +214,19 @@ pub fn particle_system_solver(
         time_passed += time_step;
 
         // Find place where update occurs
-        let update_location = distr_location.sample(&mut rng) as u64; // Sample the distribution
+        let update_location = distr_location.sample(&mut rng); // Sample the distribution
         // println!("Update occurs at {update_location}");
 
         // Find out to which state the selected particle transitions
         // Figure out neighbors and their states
-        let neighs: HashSet<u64> = graph.get_neighbors(update_location as u64);
-        let mut neigh_state_counts: HashMap<usize, u64> = HashMap::new();
+        let neighs: HashSet<usize> = graph.get_neighbors(update_location);
+        let mut neigh_state_counts: HashMap<usize, usize> = HashMap::new();
 
         for j in &neighs {
             let state_j = states.get(*j as usize).unwrap();
             neigh_state_counts.insert(
                 state_j.clone(),
-                neigh_state_counts.get(state_j).unwrap_or(&0u64) + 1,
+                neigh_state_counts.get(state_j).unwrap_or(&0usize) + 1,
             );
         }
 
@@ -234,7 +234,7 @@ pub fn particle_system_solver(
         let mut change_rates: Vec<f64> = vec![];
         for to_state in ips_rules.all_states() { // This is an unordered hash set! Can't rely on pushing order.
             change_rates.push(
-                ips_rules.get_mutation_rate(states[update_location as usize],
+                ips_rules.get_mutation_rate(states[update_location],
                                             to_state.clone(),
                                             &neigh_state_counts));
         }
@@ -259,7 +259,7 @@ pub fn particle_system_solver(
 
         // Compute own new rate
         // first need the state counts of the neighbors
-        let mut neigh_state_counts: HashMap<usize, u64> = HashMap::new();
+        let mut neigh_state_counts: HashMap<usize, usize> = HashMap::new();
         for n in &neighs {
             neigh_state_counts.insert(
                 (*states.get(*n as usize).unwrap()).clone(),

@@ -24,15 +24,15 @@ fn main() {
             .help("Run particle system on an n-dimensional grid. Specify dimensions.")
             .min_values(1)
             .multiple_values(true)
-            .value_parser(value_parser!(u64))
-            .validator(|s| s.parse::<u64>()))
+            .value_parser(value_parser!(usize))
+            .validator(|s| s.parse::<usize>()))
         .arg(arg!(--"graph-erdos-renyi" <DIMENSIONS_AND_COUNT>).required(false)
             .help("Run particle system on an Erdos-Renyi graph. Specify dimensions and average \
             number of neighbours per particle.")
             .min_values(2)
             .max_values(2)
-            .value_parser(value_parser!(u64))
-            .validator(|s| s.parse::<u64>())
+            .value_parser(value_parser!(usize))
+            .validator(|s| s.parse::<usize>())
             .multiple_values(true))
         .arg(arg!(--"graph-diluted-lattice" <X_AND_Y_DIMENSIONS_AND_PERCENTILE>).required(false)
             .help("Run particle system on a 2d diluted lattice graph. Specify dimensions and \
@@ -40,8 +40,8 @@ fn main() {
             the ordinary lattice.)")
             .min_values(3)
             .max_values(3)
-            .value_parser(value_parser!(u64))
-            .validator(|s| s.parse::<u64>())
+            .value_parser(value_parser!(usize))
+            .validator(|s| s.parse::<usize>())
             .multiple_values(true))
         .group(ArgGroup::new("graph-kind")
             .args(&["graph-grid-nd", "graph-erdos-renyi", "graph-diluted-lattice"])
@@ -142,7 +142,7 @@ fn main() {
 
     if matches.is_present("graph-grid-nd") {
 
-        let values = matches.get_many::<u64>("graph-grid-nd").unwrap();
+        let values = matches.get_many::<usize>("graph-grid-nd").unwrap();
 
         let mut grid_dimensions = vec![];
         let mut grid_glue = vec![];
@@ -156,7 +156,7 @@ fn main() {
         )
 
     } else if matches.is_present("graph-erdos-renyi") {
-        let mut values = matches.get_many::<u64>("graph-erdos-renyi").unwrap();
+        let mut values = matches.get_many::<usize>("graph-erdos-renyi").unwrap();
 
         let nr_points = values.next().unwrap();
         let avg_nr_neighs = values.next().unwrap();
@@ -167,7 +167,7 @@ fn main() {
             ErdosRenyi::new(*nr_points, *avg_nr_neighs as f64 / *nr_points as f64, rand::thread_rng())
         )
     } else if matches.is_present("graph-diluted-lattice") {
-        let mut values = matches.get_many::<u64>("graph-diluted-lattice").unwrap();
+        let mut values = matches.get_many::<usize>("graph-diluted-lattice").unwrap();
 
         let dim_x = values.next().unwrap();
         let dim_y = values.next().unwrap();
@@ -269,10 +269,10 @@ fn main() {
         let mut values = matches.get_many::<usize>("initial-different-particles").unwrap();
         let different_state = *values.next().unwrap();
         let different_particles: HashSet<&usize> = values.collect();
-        let mut different_particles_hashmap: HashMap<u64, usize> = HashMap::new();
+        let mut different_particles_hashmap: HashMap<usize, usize> = HashMap::new();
 
         for i in different_particles {
-            different_particles_hashmap.insert(*i as u64, different_state);
+            different_particles_hashmap.insert(*i, different_state);
         }
 
         initial_condition = assemble_initial_condition(0, different_particles_hashmap, graph.nr_points())

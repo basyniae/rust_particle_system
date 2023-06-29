@@ -17,10 +17,10 @@ pub mod diluted_lattice;
 /// For most applications, the edges will be undirected, and there will be no self-loops.
 pub trait Graph {
     /// Return the number of point (aka vertices, nodes) in the graph.
-    fn nr_points(&self) -> u64;
+    fn nr_points(&self) -> usize;
 
     /// Return a hash set of all the neighbors of a particular input point.
-    fn get_neighbors(&self, _: u64) -> HashSet<u64>;
+    fn get_neighbors(&self, particle: usize) -> HashSet<usize>;
     
     /// Print a description of the graph.
     fn describe(&self);

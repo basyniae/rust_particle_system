@@ -5,23 +5,23 @@ use crate::solver::graph::Graph;
 #[derive(Debug)]
 pub struct GridND {
     /// Number of points in each direction (vector length is # dimensions). 0 and 1 not allowed.
-    dimensions: Vec<u64>,
+    dimensions: Vec<usize>,
 
     /// Steps in each of the directions (not exposed).
     /// # Example:
     /// To move in the positive 3rd direction, add step_sizes.get(2) to the coordinate
-    step_sizes: Vec<u64>,
+    step_sizes: Vec<usize>,
 
     /// Do the dimension loop around?
     glue: Vec<bool>,
 
     /// How many points are there in this graph?
     /// For looping over all points
-    nr_points: u64,
+    nr_points: usize,
 }
 
 
-impl From<(Vec<u64>, Vec<bool>)> for GridND {
+impl From<(Vec<usize>, Vec<bool>)> for GridND {
     /// Construct an nD grid from two vectors.
     /// # Parameters:
     /// `value = (dimensions, glue)`
@@ -42,13 +42,13 @@ impl From<(Vec<u64>, Vec<bool>)> for GridND {
     /// ```
     /// let g = GridND::from((vec![40, 40], vec![true, false]))
     /// ```
-    fn from(value: (Vec<u64>, Vec<bool>)) -> Self {
+    fn from(value: (Vec<usize>, Vec<bool>)) -> Self {
         let (dimensions, glue) = value;
 
         // Make sure that we have enough glue-data to specify the entire GridND
         assert_eq!(dimensions.len(), glue.len());
-        assert!(!dimensions.contains(&0u64));
-        assert!(!dimensions.contains(&1u64));
+        assert!(!dimensions.contains(&0usize));
+        assert!(!dimensions.contains(&1usize));
 
         // compute step sizes
         let mut step_sizes = vec![];
@@ -69,7 +69,7 @@ impl From<(Vec<u64>, Vec<bool>)> for GridND {
     }
 }
 
-impl From<Vec<u64>> for GridND {
+impl From<Vec<usize>> for GridND {
     /// Construct a cyclic nD grid from a vector.
     /// # Parameter:
     /// * `dimensions` the vector of dimensions of the grid
@@ -78,7 +78,7 @@ impl From<Vec<u64>> for GridND {
     /// ```
     /// let g = GridND::from(vec![40, 40])
     /// ```
-    fn from(dimensions: Vec<u64>) -> Self {
+    fn from(dimensions: Vec<usize>) -> Self {
         let glue: Vec<bool> = vec![true; dimensions.len()];
 
         GridND::from((dimensions, glue))
@@ -86,41 +86,41 @@ impl From<Vec<u64>> for GridND {
 }
 
 impl Graph for GridND {
-    fn nr_points(&self) -> u64 {
+    fn nr_points(&self) -> usize {
         self.nr_points
     }
 
     // Finding the neighbors of a particular inspection point on the regular grid (hard logic, think deeply)
-    fn get_neighbors(&self, inspection_point: u64) -> HashSet<u64> {
-        let mut neighbors: HashSet<u64> = HashSet::new();
+    fn get_neighbors(&self, particle: usize) -> HashSet<usize> {
+        let mut neighbors: HashSet<usize> = HashSet::new();
 
         for (dimension_index, step_size) in self.step_sizes.iter().enumerate() {
             let current_dimension = self.dimensions.get(dimension_index).unwrap();
             // the coordinate of the point in the current dimension
-            let current_coordinate = inspection_point / step_size % current_dimension;
+            let current_coordinate = particle / step_size % current_dimension;
 
             if current_coordinate == 0 {
                 // Check if the inspection point is on the close boundary for the dimension
 
                 // now only the + is valid
-                neighbors.insert(inspection_point + step_size);
+                neighbors.insert(particle + step_size);
 
                 if *self.glue.get(dimension_index).unwrap() { // If this dimension is cyclic, loop around
-                    neighbors.insert(inspection_point + step_size * current_dimension - step_size);
+                    neighbors.insert(particle + step_size * current_dimension - step_size);
                 }
             } else if current_coordinate == current_dimension - 1 {
                 // Check if the inspection point is on the far boundary for the dimension
 
                 // now only the - is valid
-                neighbors.insert(inspection_point - step_size);
+                neighbors.insert(particle - step_size);
 
                 if *self.glue.get(dimension_index).unwrap() { // if this dimension is cyclic, loop around
-                    neighbors.insert(inspection_point + step_size - step_size * current_dimension);
+                    neighbors.insert(particle + step_size - step_size * current_dimension);
                 }
             } else {
                 // hence the point must be a generic point (in the middle)
-                neighbors.insert(inspection_point + step_size);
-                neighbors.insert(inspection_point - step_size);
+                neighbors.insert(particle + step_size);
+                neighbors.insert(particle - step_size);
             }
         }
 

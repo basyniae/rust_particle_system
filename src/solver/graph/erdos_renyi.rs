@@ -5,19 +5,19 @@ use crate::solver::graph::Graph;
 
 
 pub struct ErdosRenyi {
-    cliques: Vec<HashSet<u64>>,
+    cliques: Vec<HashSet<usize>>,
     // The order of the cliques does not matter, but we're only checking if x is a member of each clique. So that has to be a hashset.
-    nr_points: u64,
+    nr_points: usize,
     probability: f64,
 }
 
 impl Graph for ErdosRenyi {
-    fn nr_points(&self) -> u64 {
+    fn nr_points(&self) -> usize {
         self.nr_points
     }
 
-    fn get_neighbors(&self, particle: u64) -> HashSet<u64> {
-        let mut running_neighbours: HashSet<u64> = HashSet::new();
+    fn get_neighbors(&self, particle: usize) -> HashSet<usize> {
+        let mut running_neighbours: HashSet<usize> = HashSet::new();
         for clique in self.cliques.iter() {
             if clique.contains(&particle) {
                 for neigh in clique {
@@ -41,10 +41,10 @@ impl Graph for ErdosRenyi {
 }
 
 impl ErdosRenyi {
-    pub fn new(nr_points: u64, probability: f64, mut rng: ThreadRng) -> ErdosRenyi {
+    pub fn new(nr_points: usize, probability: f64, mut rng: ThreadRng) -> ErdosRenyi {
         let bernoulli_dist = Bernoulli::new(probability).unwrap();
 
-        let mut cliques: Vec<HashSet<u64>> = vec![];
+        let mut cliques: Vec<HashSet<usize>> = vec![];
 
         for i in 0..nr_points {
             for j in 0..i {

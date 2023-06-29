@@ -69,7 +69,7 @@ pub trait IPSRules {
     /// to the influence of all of its neighbors.
     ///
     /// Do not overwrite, the default implementation is correct.
-    fn get_reactivity(&self, current: usize, neighbor_counts: &HashMap<usize, u64>) -> f64 {
+    fn get_reactivity(&self, current: usize, neighbor_counts: &HashMap<usize, usize>) -> f64 {
         let mut running_rate = 0.0;
 
         // Condition over to which state `goal` self will transition
@@ -90,7 +90,7 @@ pub trait IPSRules {
     /// `other` due to the influence of all of its neighbors.
     ///
     /// Do not overwrite, the default implementation is correct.
-    fn get_mutation_rate(&self, current: usize, goal: usize, neighbor_counts: &HashMap<usize, u64>) -> f64 {
+    fn get_mutation_rate(&self, current: usize, goal: usize, neighbor_counts: &HashMap<usize, usize>) -> f64 {
         // Start with the vacuum rate of changing self to goal
         let mut running_rate = self.get_vacuum_mutation_rate(current, goal);
         // Then add the influence of all neighbors.
