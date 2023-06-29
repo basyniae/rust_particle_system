@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 pub mod grid_n_d;
 pub mod erdos_renyi;
+pub mod diluted_lattice;
 
 /// Graph trait. Implements number of points, and getting neighbors of a particular point.
 ///

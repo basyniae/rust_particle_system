@@ -288,6 +288,7 @@ pub fn particle_system_solver(
         }
 
         // Update rates for selecting the next point
+        // By finding all the points at which the reactivity changes.
         let mut changing_weights = vec![(update_location as usize, reactivities.get(update_location as usize).unwrap())]; // harvest the new rate of the updating particle
         for n in &neighs { // harvest the changed rates from the neighbors
             changing_weights.push((*n as usize, reactivities.get(*n as usize).unwrap()));

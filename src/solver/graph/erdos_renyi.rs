@@ -8,7 +8,7 @@ pub struct ErdosRenyi {
     cliques: Vec<HashSet<u64>>,
     // The order of the cliques does not matter, but we're only checking if x is a member of each clique. So that has to be a hashset.
     nr_points: u64,
-    parameter: f64,
+    probability: f64,
 }
 
 impl Graph for ErdosRenyi {
@@ -33,15 +33,16 @@ impl Graph for ErdosRenyi {
     }
 
     fn describe(&self) {
-        println!("Erdos-Renyi graph: two different points i and j are by an edge with probability {}",
-                 self.parameter);
+        println!("Erdos-Renyi graph: two different points i and j are connected by an edge with \
+        probability {}",
+                 self.probability);
         // println!("{:?}", self.cliques)
     }
 }
 
 impl ErdosRenyi {
-    pub fn new(nr_points: u64, parameter: f64, mut rng: ThreadRng) -> ErdosRenyi {
-        let bernoulli_dist = Bernoulli::new(parameter).unwrap();
+    pub fn new(nr_points: u64, probability: f64, mut rng: ThreadRng) -> ErdosRenyi {
+        let bernoulli_dist = Bernoulli::new(probability).unwrap();
 
         let mut cliques: Vec<HashSet<u64>> = vec![];
 
@@ -56,7 +57,7 @@ impl ErdosRenyi {
         ErdosRenyi {
             cliques,
             nr_points,
-            parameter,
+            probability,
         }
     }
 }

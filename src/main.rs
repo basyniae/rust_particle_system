@@ -5,6 +5,7 @@ use crate::solver::assemble_initial_condition::{assemble_initial_condition, asse
 use crate::solver::graph::{Graph};
 use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
+use crate::solver::graph::diluted_lattice::DilutedLattice;
 use crate::solver::graph::erdos_renyi::ErdosRenyi;
 use crate::solver::graph::grid_n_d::GridND;
 use crate::solver::ips_rules::si_process::SIProcess;
@@ -33,8 +34,17 @@ fn main() {
             .value_parser(value_parser!(u64))
             .validator(|s| s.parse::<u64>())
             .multiple_values(true))
+        .arg(arg!(--"graph-diluted-lattice" <X_AND_Y_DIMENSIONS_AND_PERCENTILE>).required(false)
+            .help("Run particle system on a 2d diluted lattice graph. Specify dimensions and \
+            percentile of the edges being present in the diluted lattice. (100% corresponds with \
+            the ordinary lattice.)")
+            .min_values(3)
+            .max_values(3)
+            .value_parser(value_parser!(u64))
+            .validator(|s| s.parse::<u64>())
+            .multiple_values(true))
         .group(ArgGroup::new("graph-kind")
-            .args(&["graph-grid-nd", "graph-erdos-renyi"])
+            .args(&["graph-grid-nd", "graph-erdos-renyi", "graph-diluted-lattice"])
             .required(true)
         )
         // Select IPS
@@ -146,7 +156,6 @@ fn main() {
         )
 
     } else if matches.is_present("graph-erdos-renyi") {
-
         let mut values = matches.get_many::<u64>("graph-erdos-renyi").unwrap();
 
         let nr_points = values.next().unwrap();
@@ -157,7 +166,16 @@ fn main() {
         graph = Box::new(
             ErdosRenyi::new(*nr_points, *avg_nr_neighs as f64 / *nr_points as f64, rand::thread_rng())
         )
+    } else if matches.is_present("graph-diluted-lattice") {
+        let mut values = matches.get_many::<u64>("graph-diluted-lattice").unwrap();
 
+        let dim_x = values.next().unwrap();
+        let dim_y = values.next().unwrap();
+        let percentile = values.next().unwrap();
+
+        graph = Box::new(
+            DilutedLattice::new(*dim_x, *dim_y, *percentile as f64 / 100.0, rand::thread_rng())
+        )
     } else {
         panic!("Graph not recognized!");
     }
