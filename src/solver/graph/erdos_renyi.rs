@@ -5,6 +5,8 @@ use crate::solver::graph::Graph;
 
 
 pub struct ErdosRenyi {
+    // The description of an E-R graph is not unique given a list of cliques. This leaves room for
+    // an optimization with less, bigger cliques.
     cliques: Vec<HashSet<usize>>,
     // The order of the cliques does not matter, but we're only checking if x is a member of each clique. So that has to be a hashset.
     nr_points: usize,
@@ -36,7 +38,6 @@ impl Graph for ErdosRenyi {
         println!("Erdos-Renyi graph: two different points i and j are connected by an edge with \
         probability {}",
                  self.probability);
-        // println!("{:?}", self.cliques)
     }
 }
 
@@ -46,6 +47,7 @@ impl ErdosRenyi {
 
         let mut cliques: Vec<HashSet<usize>> = vec![];
 
+        // Loop over all unordered pairs of points, and determine randomly if they're connected
         for i in 0..nr_points {
             for j in 0..i {
                 if bernoulli_dist.sample(&mut rng) {

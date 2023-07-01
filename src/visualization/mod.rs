@@ -17,6 +17,7 @@ pub trait Coloration {
 /// * `img_name`: &str of the image to be saved. Should end in ".png".
 /// * `img_x`: Width of the simulation, i.e., number of points in the graph.
 pub fn save_as_growth_img(coloration: Box<dyn Coloration>, solution: Vec<usize>, img_name: &str, img_x: u32) {
+    // y is the time axis, so the y-range should be the length of the simulation
     let img_y = (solution.len() as u32) / img_x;
 
     let mut img_buf = image::ImageBuffer::new(img_x, img_y);
@@ -44,6 +45,7 @@ pub fn save_as_gif(coloration: Box<dyn Coloration>, solution: Vec<usize>, img_na
 
     let mut encoder = GifEncoder::new_with_speed(file_out, 30);
 
+    // Gif config: repeat once (does not work)
     encoder.set_repeat(Repeat::Finite(1)).unwrap();
 
     let nr_frames = solution.len() / (img_x * img_y) as usize;
@@ -59,5 +61,6 @@ pub fn save_as_gif(coloration: Box<dyn Coloration>, solution: Vec<usize>, img_na
         frames.push(frame);
     }
 
+    // finally encode
     encoder.encode_frames(&mut frames.into_iter()).unwrap();
 }

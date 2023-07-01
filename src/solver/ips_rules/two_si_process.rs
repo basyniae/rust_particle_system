@@ -1,6 +1,6 @@
 use crate::{Coloration, IPSRules};
 
-// 0: no party (neutral), 1: first party, 2: second party
+// 0: no party (neutral), 1: first party, 2: second party. Parameters described in main.rs.
 pub struct TwoSIProcess {
     pub birth_rate: f64,
     pub death_rate: f64,

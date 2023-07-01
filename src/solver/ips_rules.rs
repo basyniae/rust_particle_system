@@ -12,6 +12,7 @@ pub mod sir_process;
 /// * `all_states`
 /// * `get_vacuum_mutation_rate`
 /// * `get_neighbor_mutation_rate`
+/// * `describe`
 ///
 /// The word `reactivity` is reserved for transition of one state to any other state, meaning the
 /// rate at which any update occurs. The word `mutation` is reserved for transition of one state
@@ -22,7 +23,7 @@ pub trait IPSRules {
     /// Overwrite for each system.
     fn all_states(&self) -> Vec<usize>;
 
-    /// Returns the rate at which a particle in a given state `self` changes to the state `goal`
+    /// Returns the rate at which a particle in a given state `current` changes to the state `goal`
     /// in vacuum, meaning without any neighbors influencing it.
     ///
     /// Overwrite for each system.
@@ -31,12 +32,12 @@ pub trait IPSRules {
     /// In the contact process, there is a chance that the virus in a particular infected particle
     /// dies, so that this particles state becomes susceptible. Say this happens at rate 1.4.
     /// We will get
-    /// `Infected.get_vacuum_change_rate(Susceptible) = 1.4`. All other combinations of susceptible
-    /// and infected in the parameters should return 0.0 (no spontaneous change).
+    /// `si_process.get_vacuum_change_rate(1, 0) = 1.4` (0 means susceptible). All other
+    /// combinations of susceptible and infected in the parameters should return 0.0 (no spontaneous change).
     fn get_vacuum_mutation_rate(&self, current: usize, goal: usize) -> f64;
 
 
-    /// Returns increase the rate at which a particular particle in a given state `self` changes to
+    /// Returns increase the rate at which a particular particle in a given state `current` changes to
     /// a state `goal` due to the presence of a neighbor in the state `sender`.
     ///
     /// Overwrite for each system.
@@ -44,14 +45,15 @@ pub trait IPSRules {
     /// # Examples
     /// * In the contact process, the presence of every infected neighbor raises the rate of a susceptible
     /// particle becoming infected. Say the rate is raised by 1.0. Hence we will get
-    /// `Susceptible.get_received_change_rate_from_sender(Infected, Infected) = 1.0`. All other
-    /// combinations of susceptible and infected in the parameters should return 0.0 (no influence).
+    /// `si_process.get_received_change_rate_from_sender(0, 1, 1) = 1.0` (0 means susceptible,
+    /// 1 means infected). All other combinations of susceptible and infected in the parameters
+    /// should return 0.0 (no influence).
     ///
     /// * In the voter process, the presence of party A neighbours increases the rates of a party B
     /// particle changing to party A.
     fn get_neighbor_mutation_rate(&self, current: usize, goal: usize, sender: usize) -> f64;
 
-    /// Returns the increase in rate at which a particle in a given state `self` changes to any
+    /// Returns the increase in rate at which a particle in a given state `current` changes to any
     /// other state due to the presence of a neighbors in the state `sender`.
     ///
     /// Do not overwrite, the default implementation is correct.
@@ -65,7 +67,7 @@ pub trait IPSRules {
         running_rate
     }
 
-    /// Returns the rate at which a particle in a given state `self` changes to any other state due
+    /// Returns the rate at which a particle in a given state `current` changes to any other state due
     /// to the influence of all of its neighbors.
     ///
     /// Do not overwrite, the default implementation is correct.
@@ -86,7 +88,7 @@ pub trait IPSRules {
         running_rate
     }
 
-    /// Returns the rate at which a particle in a given state `self` changes to a particular state
+    /// Returns the rate at which a particle in a given state `current` changes to a particular state
     /// `other` due to the influence of all of its neighbors.
     ///
     /// Do not overwrite, the default implementation is correct.

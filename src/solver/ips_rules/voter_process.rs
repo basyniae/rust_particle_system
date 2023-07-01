@@ -1,5 +1,6 @@
 use crate::{Coloration, IPSRules};
 
+// 0: first party, 1: second party, etc. Parameters described in main.rs.
 pub struct VoterProcess {
     pub nr_parties: usize,
     pub change_rate: f64,

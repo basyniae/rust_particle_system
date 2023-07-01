@@ -1,6 +1,6 @@
 use crate::{Coloration, IPSRules};
 
-// 0: Susceptible, 1: Infected, 2: Removed
+// 0: Susceptible, 1: Infected, 2: Removed. Parameters described in main.rs.
 pub struct SIRProcess {
     pub(crate) birth_rate: f64,
     pub(crate) death_rate: f64,

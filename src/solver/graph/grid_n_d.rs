@@ -47,8 +47,8 @@ impl From<(Vec<usize>, Vec<bool>)> for GridND {
 
         // Make sure that we have enough glue-data to specify the entire GridND
         assert_eq!(dimensions.len(), glue.len());
-        assert!(!dimensions.contains(&0usize));
-        assert!(!dimensions.contains(&1usize));
+        assert!(!dimensions.contains(&0usize)); // dimension 0 is meaningless
+        assert!(!dimensions.contains(&1usize)); // dimension 1 is trivial, just use less dimensions
 
         // compute step sizes
         let mut step_sizes = vec![];

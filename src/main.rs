@@ -2,22 +2,17 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use clap::{arg, ArgGroup, command, value_parser};
 use crate::solver::assemble_initial_condition::{assemble_initial_condition, assemble_random_initial_condition};
-use crate::solver::graph::{Graph};
-use crate::solver::ips_rules::{IPSRules};
 use crate::solver::{HaltCondition, particle_system_solver, RecordCondition};
-use crate::solver::graph::diluted_lattice::DilutedLattice;
-use crate::solver::graph::erdos_renyi::ErdosRenyi;
-use crate::solver::graph::grid_n_d::GridND;
-use crate::solver::ips_rules::si_process::SIProcess;
-use crate::solver::ips_rules::sir_process::SIRProcess;
-use crate::solver::ips_rules::two_si_process::TwoSIProcess;
-use crate::solver::ips_rules::voter_process::VoterProcess;
+use crate::solver::graph::{Graph, diluted_lattice::DilutedLattice, erdos_renyi::ErdosRenyi, grid_n_d::GridND};
+use crate::solver::ips_rules::{IPSRules, si_process::SIProcess, sir_process::SIRProcess, two_si_process::TwoSIProcess, voter_process::VoterProcess};
 use crate::visualization::{Coloration, save_as_gif, save_as_growth_img};
 
 pub mod visualization;
 pub mod solver;
 
 fn main() {
+
+    // Get the arguments
     let matches = command!("cmd")
         // Select graph
         .arg(arg!(--"graph-grid-nd" <DIMENSIONS>).required(false)
@@ -58,8 +53,8 @@ fn main() {
             .help("Voter process (competitive) on the specified number of parties (i.e., states).")
             .value_parser(value_parser!(usize)))
         .arg(arg!(--"ips-two-si" <BIRTH_AND_DEATH_AND_COMPETE_RATE>)
-            .help("Susceptible-infected process with two identical invasive species (states 1 and 2), competing indirectly \
-        via the available space, and directly via conversion (i.e., combat).")
+            .help("Susceptible-infected process with two identical invasive species (states 1 \
+            and 2), competing indirectly via the available space, and directly via conversion (i.e., combat).")
             .min_values(3)
             .max_values(3)
             .value_parser(value_parser!(f64))
@@ -135,38 +130,36 @@ fn main() {
 
         .get_matches();
 
-    /* Get the arguments into a pretty form */
+    /* Convert the arguments to usable objects */
 
     // Make graph from provided arguments
     let graph: Box<dyn Graph>;
 
     if matches.is_present("graph-grid-nd") {
-
+        // nd toroidal graph. arguments are the dimensions
         let values = matches.get_many::<usize>("graph-grid-nd").unwrap();
 
         let mut grid_dimensions = vec![];
-        let mut grid_glue = vec![];
 
         for i in values {
             grid_dimensions.push(*i);
-            grid_glue.push(true);
         }
-        graph = Box::new(
-            GridND::from((grid_dimensions, grid_glue))
-        )
 
+        graph = Box::new(
+            GridND::from(grid_dimensions)
+        )
     } else if matches.is_present("graph-erdos-renyi") {
+        // Erdos-Renyi graph. arguments are the nr. of points, and avg. nr. of neighbors
         let mut values = matches.get_many::<usize>("graph-erdos-renyi").unwrap();
 
         let nr_points = values.next().unwrap();
         let avg_nr_neighs = values.next().unwrap();
 
-        // The probability that 2 points are connected is related to the avg number of neighbours,
-        //  the first of which is noninteger, the second of which might be
         graph = Box::new(
             ErdosRenyi::new(*nr_points, *avg_nr_neighs as f64 / *nr_points as f64, rand::thread_rng())
         )
     } else if matches.is_present("graph-diluted-lattice") {
+        // Diluted lattice graph. arguments are x-dimension, y-dimension, and percentage connected.
         let mut values = matches.get_many::<usize>("graph-diluted-lattice").unwrap();
 
         let dim_x = values.next().unwrap();
@@ -180,16 +173,18 @@ fn main() {
         panic!("Graph not recognized!");
     }
 
+    // Print pretty statistics of the selected graph
     println!("Graph:");
-    graph.describe(); // Print pretty statistics of the selected graph
+    graph.describe();
+    // Precompute nr. of points on the graph
     let graph_nr_points = graph.nr_points();
 
-    // Load up default values for ips rules
+    // Make ips from provided arguments
     let ips_rules: Box<dyn IPSRules>;
     let coloration: Box<dyn Coloration>;
 
-    // Make ips from provided arguments
     if matches.is_present("ips-si") {
+        // Susceptible-infected process,  parameters are birth and death rate
         let mut values = matches.get_many::<f64>("ips-si").unwrap();
         assert_eq!(values.len(), 2); // raise argument error
         let birth_rate = *values.next().unwrap();
@@ -205,6 +200,7 @@ fn main() {
             death_rate,
         });
     } else if matches.is_present("ips-voter") {
+        // voter model on specified number of parties
         let nr_parties = *matches.get_one::<usize>("ips-voter").unwrap();
 
         coloration = Box::new(VoterProcess {
@@ -219,6 +215,7 @@ fn main() {
             change_rate: 1.0,
         });
     } else if matches.is_present("ips-two-si") {
+        // Two-species SI-model, parameters are birth, death, and compete rates
         let mut values = matches.get_many::<f64>("ips-two-si").unwrap();
         assert_eq!(values.len(), 3); // raise argument error
         let birth_rate = *values.next().unwrap();
@@ -237,6 +234,7 @@ fn main() {
             compete_rate,
         });
     } else if matches.is_present("ips-sir") {
+        // Susceptible-infected-removed process, parameters are birth and death rates
         let mut values = matches.get_many::<f64>("ips-sir").unwrap();
         assert_eq!(values.len(), 2); // raise argument error
         let birth_rate = *values.next().unwrap();
@@ -255,17 +253,19 @@ fn main() {
         panic!("No other processes implemented")
     }
 
+    // Pretty print ips description
     println!("Interacting particle system:");
     ips_rules.describe();
     println!();
 
-    // Load up default initial condition
+    // Make initial condition from provided arguments
     let initial_condition: Vec<usize>;
 
-    // Make initial condition from provided arguments
     if matches.is_present("initial-random") {
+        // random initial condition, all states have equal probability of being chosen.
         initial_condition = assemble_random_initial_condition(ips_rules.all_states(), graph_nr_points)
     } else if matches.is_present("initial-different-particles") {
+        // specify certain particles as having state different from 0
         let mut values = matches.get_many::<usize>("initial-different-particles").unwrap();
         let different_state = *values.next().unwrap();
         let different_particles: HashSet<&usize> = values.collect();
@@ -280,10 +280,9 @@ fn main() {
         panic!("Initial condition not recognized!")
     }
 
-    // Load up default halting condition
+    // Make halting condition from provided arguments
     let halting_condition: HaltCondition;
 
-    // Make halting condition from provided arguments
     if matches.is_present("halt-time-passed") {
         halting_condition = HaltCondition::TimePassed(
             *matches.get_one::<f64>("halt-time-passed").unwrap()
@@ -300,10 +299,9 @@ fn main() {
         panic!("Halting condition not recognized!")
     }
 
-    // Load up default record condition
+    // Make initial condition from provided arguments
     let mut record_condition = RecordCondition::Final();
 
-    // Make initial condition from provided arguments
     if matches.is_present("record-final") {
         record_condition = RecordCondition::Final()
     } else if matches.is_present("record-nth-step") {
@@ -346,6 +344,7 @@ fn main() {
 
     /* Pack simulation into image */
     if matches.is_present("image-growth") {
+        // save as growth image
         let img_x = graph_nr_points;
         let img_name = matches.get_one::<String>("output").unwrap();
         assert_eq!(img_name[img_name.len() - 4..], *".png");
@@ -357,6 +356,7 @@ fn main() {
             img_x as u32,
         )
     } else if matches.is_present("image-gif") {
+        // save as gif
         let mut values = matches.get_many::<u32>("image-gif").unwrap();
         let img_y = values.next().unwrap();
         let img_x = graph_nr_points as u32 / img_y;

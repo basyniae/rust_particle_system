@@ -1,7 +1,7 @@
 use crate::solver::ips_rules::{IPSRules,};
 use crate::visualization::{Coloration};
 
-// 0: Susceptible, 1: Infected
+// 0: Susceptible, 1: Infected. Parameters described in main.rs/
 pub struct SIProcess {
     pub death_rate: f64,
     pub birth_rate: f64,

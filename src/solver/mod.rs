@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use rand::distributions::{WeightedError, WeightedIndex, Distribution};
+
+use rand::distributions::{Distribution, WeightedError, WeightedIndex};
 use rand::Rng;
 use rand::rngs::ThreadRng;
+
 use crate::solver::exponential_distribution::StandardExponential;
 use crate::solver::graph::Graph;
-use crate::solver::ips_rules::{IPSRules,};
+use crate::solver::ips_rules::IPSRules;
 
 pub mod ips_rules;
 pub mod graph;
@@ -47,21 +49,20 @@ impl HaltCondition {
 }
 
 /// Enum to be passed into `particle_system_solver` that determines the recording condition.
-/// # Variants
-/// * `ConstantTime(f64)`: record the state after a constant amount of time has passed.
-/// * `EveryNthStep(usize)`: record the state every nth step. Useful for discrete-time particle
-/// systems.
-/// * `Final()`: only record the final state.
 #[derive(Debug)]
 pub enum RecordCondition {
+    /// Record the state after a constant amount of time has passed.
     ConstantTime(f64),
+    /// Record the state every nth step. Useful for discrete-time particle systems.
     EveryNthStep(usize),
+    /// Only record the final state.
     Final(),
 }
 
 impl RecordCondition {
     /// Given the record condition `self`, how often should the previous state be recorded?
-    pub fn how_often_record(&self, time_passed: f64, time_step: f64, steps_taken: u64, is_final: bool) -> usize {
+    /// Called at the end of every step.
+    pub fn how_often_record(&self, time_passed: f64, time_step: f64, steps_taken: u64) -> usize {
         match self {
             RecordCondition::ConstantTime(time_interval) => {
                 ((time_passed / time_interval).floor() - ((time_passed - time_step) / time_interval).floor())
@@ -70,13 +71,7 @@ impl RecordCondition {
             RecordCondition::EveryNthStep(n) => {
                 ((steps_taken as usize) % n == 0) as usize
             }
-            RecordCondition::Final() => {
-                if is_final {
-                    1
-                } else {
-                    0
-                }
-            }
+            RecordCondition::Final() => { 0 }
         }
     }
 }
@@ -90,7 +85,7 @@ impl RecordCondition {
 /// * `graph`: Graph which defines neighboring states (e.g., line, circle, torus, GridND). Has to
 /// implement `Graph` trait.
 /// * `initial_condition`: Vector containing the initial states of the particles. States are
-/// represented by integers, if applicable, 0 is the default state.
+/// represented by integers. If applicable, 0 is the default state.
 /// * `halting_condition`: HaltCondition enum which determines under what conditions the simulation
 /// halts (e.g., stop after 10.0 time units, or 20 steps have been recorded).
 /// * `record_condition`: RecordCondition enum which determines under what conditions the state
@@ -110,33 +105,37 @@ impl RecordCondition {
 ///
 /// # Example
 /// Simulate the two voter process for 100.0 time units on a 40x40 toroidal grid, with random
-/// initial condition. Record the state every 0.5 time units. Write the output to a 40x40 gif, where
-/// every frame takes 100 ms.
+/// initial condition. Record the state every 0.1 time units. Write the output to a 40x40 gif, where
+/// every frame takes 20 ms (50 fps).
 /// ```
+/// // make graph
+/// let graph = Box::new(GridND::from((vec![40, 40])));
+///
+/// // make ips rules
+/// let ips_rules = Box::new(VoterProcess {
+///     nr_parties: 2,
+///     change_rate: 1.0,
+/// });
+///
 /// // make the initial condition
 /// let initial_condition = assemble_random_initial_condition(
-///     vec![TwoVoterProcess::PartyA, TwoVoterProcess::PartyB],
+///     vec![0, 1],
 ///     40 * 40,
 /// );
 ///
-/// // make the particle system
-/// let ips_rules = Box::new(
-///         Two
 ///
-/// // run the simulation TODO: Update example
+/// // run the simulation
 /// let solution = particle_system_solver(
-///     Box::new(
-///
-///     ),
-///     GridND::from(vec![40, 40]),
+///     ips_rules,
+///     graph,
 ///     initial_condition,
 ///     HaltCondition::TimePassed(100.0),
-///     RecordCondition::ConstantTime(0.5),
+///     RecordCondition::ConstantTime(0.1),
 ///     rand::thread_rng(),
 /// );
 ///
 /// // put the output into a pretty gif
-/// save_as_gif(solution, "voter_process.gif", 40, 40, 100)
+/// save_as_gif(solution, "voter_process.gif", 40, 40, 20)
 /// ```
 pub fn particle_system_solver(
     ips_rules: Box<dyn IPSRules>,
@@ -148,40 +147,37 @@ pub fn particle_system_solver(
 ) -> (Vec<usize>, Vec<usize>, f64, u64, u64) {
     // * PHASE I: Initialization * //
 
-    // Initialize integer-to-state mapping
-    let mut int_to_state: Vec<usize> = vec![];
-    for s in ips_rules.all_states() {
-        int_to_state.push(s.clone())
-    }
-
     // Initialize state & reactivity vectors
     let mut states: Vec<usize> = initial_condition;
-    assert_eq!(states.len(), graph.nr_points() as usize); // Check if enough information was given in the initial state
 
-    let mut reactivities: Vec<f64> = Vec::with_capacity(graph.nr_points() as usize);
+    // Check if enough information was given in the initial state
+    assert_eq!(states.len(), graph.nr_points());
 
-    // Compute initial rates
-    for i in 0..graph.nr_points() { // Loop over all states
-        // Count how many of which neighbor their are, by looping over the neighbors
+    // Compute initial reactivities
+    let mut reactivities: Vec<f64> = Vec::with_capacity(graph.nr_points());
+
+    for i in 0..graph.nr_points() { // Loop over all points
+        // Count how many of which neighboring states this point i has, by looping over all neighbors
         let mut neigh_counts: HashMap<usize, usize> = HashMap::new();
+
         for j in graph.get_neighbors(i) {
-            let state_j = states.get(j as usize).unwrap();
+            let state_j = states.get(j).unwrap();
             neigh_counts.insert(
                 state_j.clone(),
                 neigh_counts.get(state_j).unwrap_or(&0usize) + 1,
             );
         }
+
         // Pass these counts to the IPS rules object to find the rate
         reactivities.push(
-            ips_rules.get_reactivity(states[i as usize].clone(), &neigh_counts)
+            ips_rules.get_reactivity(states[i].clone(), &neigh_counts)
         );
     }
 
     // Initialize the total rate
     let mut total_reactivity: f64 = reactivities.iter().sum();
     // Initialize state record
-    let mut states_record: Vec<usize> = vec![]; // Needs to be empty, the first state is already
-    // recorded by the process
+    let mut states_record: Vec<usize> = vec![];
 
     // Initialize timekeeping
     let mut time_passed = 0.0;
@@ -192,6 +188,7 @@ pub fn particle_system_solver(
     let mut distr_location = match WeightedIndex::new(&reactivities) {
         Ok(distribution) => distribution,
         Err(e) => {
+            // Debug information
             println!("The states are {:?}", states);
             println!("The rates are {:?}", reactivities);
             panic!("Problem assembling location distribution: {:?}", e)
@@ -200,9 +197,8 @@ pub fn particle_system_solver(
 
     // * PHASE 2: Simulation loop * //
     while halting_condition.should_continue(time_passed, steps_recorded, steps_taken) {
+        /* Update timekeeping */
         steps_taken += 1;
-        // println!();
-        // println!("states: {:?}", states);
         let prev_state = states.clone();
 
         // Generate time step (until next event)
@@ -213,17 +209,17 @@ pub fn particle_system_solver(
 
         time_passed += time_step;
 
-        // Find place where update occurs
-        let update_location = distr_location.sample(&mut rng); // Sample the distribution
-        // println!("Update occurs at {update_location}");
+        /* Find place where update occurs */
+        // Sample the distribution
+        let update_location = distr_location.sample(&mut rng);
 
-        // Find out to which state the selected particle transitions
+        /* Find out to which state the selected particle transitions */
         // Figure out neighbors and their states
         let neighs: HashSet<usize> = graph.get_neighbors(update_location);
         let mut neigh_state_counts: HashMap<usize, usize> = HashMap::new();
 
         for j in &neighs {
-            let state_j = states.get(*j as usize).unwrap();
+            let state_j = states.get(*j).unwrap();
             neigh_state_counts.insert(
                 state_j.clone(),
                 neigh_state_counts.get(state_j).unwrap_or(&0usize) + 1,
@@ -232,66 +228,74 @@ pub fn particle_system_solver(
 
         // Assemble transition rate distribution (by sampling all states)
         let mut change_rates: Vec<f64> = vec![];
-        for to_state in ips_rules.all_states() { // This is an unordered hash set! Can't rely on pushing order.
+        for to_state in ips_rules.all_states() {
             change_rates.push(
                 ips_rules.get_mutation_rate(states[update_location],
                                             to_state.clone(),
                                             &neigh_state_counts));
         }
 
-        // println!("Change rates: {:?}", change_rates);
-
+        // Initialize distribution object
         let distr_to_state = match WeightedIndex::new(change_rates) {
             Ok(distribution) => { distribution }
-            Err(WeightedError::AllWeightsZero) => { break }
-            Err(other) => {panic!("Strange error! {:?}", other)}
+            Err(WeightedError::AllWeightsZero) => { break; }
+            Err(other) => { panic!("Strange error! {:?}", other) }
         };
-        // println!("Distr to state: {:?}", distr_to_state);
 
         // Sample the distribution we found to get the state to which the particle transitions
-        let new_state = int_to_state[distr_to_state.sample(&mut rng) as usize].clone();
-        // println!("New state: {new_state}");
+        let new_state = distr_to_state.sample(&mut rng);
+
+        /* Update states and reactivities */
 
         // Record previous state our particle was in
-        let old_particle_state = (*states.get(update_location as usize).unwrap()).clone();
+        let old_particle_state = (*states.get(update_location).unwrap()).clone();
         // Change old state to new state
-        states[update_location as usize] = new_state.clone();
+        states[update_location] = new_state.clone();
 
         // Compute own new rate
         // first need the state counts of the neighbors
         let mut neigh_state_counts: HashMap<usize, usize> = HashMap::new();
         for n in &neighs {
             neigh_state_counts.insert(
-                (*states.get(*n as usize).unwrap()).clone(),
-                neigh_state_counts.get(&states[*n as usize]).unwrap_or(&0) + 1,
+                (*states.get(*n).unwrap()).clone(),
+                neigh_state_counts.get(&states[*n]).unwrap_or(&0) + 1,
             );
         }
-        total_reactivity -= reactivities[update_location as usize]; // Need to update total rate as well
-        reactivities[update_location as usize] = ips_rules.get_reactivity(new_state, &neigh_state_counts);
-        total_reactivity += reactivities[update_location as usize];
+        total_reactivity -= reactivities[update_location]; // Need to update total rate as well
+        reactivities[update_location] = ips_rules.get_reactivity(new_state, &neigh_state_counts);
+        total_reactivity += reactivities[update_location];
+
 
 
         // Update surrounding rates & total rate
-        for n in &neighs { // for every neighbor of the particle that's being updated
-            // Subtract the old spread rate //After some steps we get a floating point error. Doesn't matter, it's linear, but it does panic at negative rates
+        for n in &neighs {
+            // For every neighbor of the particle that's being updated
 
-            let old_spread_rate = ips_rules.get_neighbor_reactivity(states[*n as usize], old_particle_state.clone());
-            reactivities[*n as usize] -= old_spread_rate;
-            total_reactivity -= old_spread_rate; // (we'll hopefully never get floating point problems with this?)
-            // and add the new spread rate
-            let new_spread_rate = ips_rules.get_neighbor_reactivity(states[*n as usize], new_state.clone());
-            reactivities[*n as usize] += new_spread_rate;
+            // Compute the old spread rate
+            let old_spread_rate = ips_rules.get_neighbor_reactivity(states[*n], old_particle_state.clone());
+            // Subtract the old spread rate from both the reactivities and the total reactivity
+            reactivities[*n] -= old_spread_rate;
+            total_reactivity -= old_spread_rate;
+            // Compute the new spread rate
+            let new_spread_rate = ips_rules.get_neighbor_reactivity(states[*n], new_state.clone());
+            // Add the new spread rate to both the reactivities and total reactivity
+            reactivities[*n] += new_spread_rate;
             total_reactivity += new_spread_rate;
-            if reactivities[*n as usize] < 0.0 { // floating point error safety net
-                reactivities[*n as usize] = 0.0;
+
+            // Floating point error safety net, WeightIndex panics at negative values
+            if reactivities[*n] < 0.0 {
+                reactivities[*n] = 0.0;
             }
+
         }
 
         // Update rates for selecting the next point
         // By finding all the points at which the reactivity changes.
-        let mut changing_weights = vec![(update_location as usize, reactivities.get(update_location as usize).unwrap())]; // harvest the new rate of the updating particle
+        // Collect a list of reactivities that change.
+        // TODO: This is ugly, and I want to get rid of it, but I'm not sure how to work around the references. May be able to get rid of `reactivities` entirely
+        let mut changing_weights = vec![(update_location, reactivities.get(update_location).unwrap())]; // harvest the new rate of the updating particle
         for n in &neighs { // harvest the changed rates from the neighbors
-            changing_weights.push((*n as usize, reactivities.get(*n as usize).unwrap()));
+            changing_weights.push((*n, &reactivities[*n]));
         }
         changing_weights.sort_by(|a, b| (a.0).cmp(&b.0)); // sorting is required for .update_weights()
         match distr_location.update_weights(&changing_weights[..]) {
@@ -301,7 +305,7 @@ pub fn particle_system_solver(
         }; // By far the heaviest operation in the whole program
 
         // Record new state
-        for _ in 0..record_condition.how_often_record(time_passed, time_step, steps_taken, false) {
+        for _ in 0..record_condition.how_often_record(time_passed, time_step, steps_taken) {
             states_record.append(&mut prev_state.clone());
             steps_recorded += 1;
             if !halting_condition.should_continue(time_passed, steps_recorded, steps_taken) { // we want to check the halting condition each step
@@ -310,10 +314,10 @@ pub fn particle_system_solver(
         }
     }
 
-    // Record final state (if that record condition is given)
-    for _ in 0..record_condition.how_often_record(time_passed, 0.0, steps_taken, true) {
-        states_record.append(&mut states.clone());
-    }
+    // * PHASE III: Cleanup * //
+
+    // Record final state
+    states_record.append(&mut states.clone());
 
     (states_record, states, time_passed, steps_recorded, steps_taken)
 }

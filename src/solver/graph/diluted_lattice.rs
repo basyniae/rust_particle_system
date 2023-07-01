@@ -11,7 +11,7 @@ pub struct DilutedLattice {
     dim_y: usize,
     step_y: usize,
     probability: f64,
-    is_edge: Vec<bool>, // A mask over the actual lattice (which has enumerated edges)
+    is_edge: Vec<bool>, // A mask over the actual lattice's edges
 }
 
 impl Graph for DilutedLattice {
@@ -21,13 +21,12 @@ impl Graph for DilutedLattice {
 
     fn get_neighbors(&self, particle: usize) -> HashSet<usize> {
         let mut running_neighbors = HashSet::new();
-        // There are 4 potential neighbors, which we compute as in GridND. Then we consult the is_edge list.
-
-        // println!("Getting neighbours of {particle}");
+        // There are 4 potential neighbors from the associated lattice, which we compute as in
+        // GridND. Then we consult the is_edge list to see if they are actual neighbors in diluted
+        // lattice.
 
         let x_coord = particle % self.dim_x;
         let y_coord = particle / self.dim_x;
-        // println!("x: {x_coord}, y: {y_coord}");
 
         // the right neighbor:
         if x_coord == self.dim_x - 1 { //  if on the far boundary
@@ -70,7 +69,6 @@ impl Graph for DilutedLattice {
                 running_neighbors.insert(particle - self.step_y);
             }
         }
-        // println!("The neighbours are {:?}", running_neighbors);
 
         running_neighbors
     }
@@ -83,6 +81,8 @@ impl Graph for DilutedLattice {
 }
 
 impl DilutedLattice {
+    /// Construct new diluted lattice from x-dimension, y-dimension, and probability that a certain
+    /// edge is in the lattice.
     pub fn new(dim_x: usize, dim_y: usize, probability: f64, rng: ThreadRng) -> DilutedLattice {
         let bernoulli_dist = Bernoulli::new(probability).unwrap();
         let mut sampler = bernoulli_dist.sample_iter(rng);
