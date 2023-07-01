@@ -21,7 +21,7 @@ fn main() {
             .multiple_values(true)
             .value_parser(value_parser!(usize))
             .validator(|s| s.parse::<usize>()))
-        .arg(arg!(--"graph-erdos-renyi" <DIMENSIONS_AND_COUNT>).required(false)
+        .arg(arg!(--"graph-erdos-renyi" <NR_NODES_AND_AVG_NEIGHS_PER_NODE>).required(false)
             .help("Run particle system on an Erdos-Renyi graph. Specify dimensions and average \
             number of neighbours per particle.")
             .min_values(2)
