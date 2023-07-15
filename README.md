@@ -1,5 +1,5 @@
 # rust_particle_system
-CLI tool for the simulation of Interacting Particle Systems. For a theoretical background, see e.g., Stochastic Modeling by Lanchier (2017), chapter 14 for a general introduction, chapter 15 for the contact process (here called the SI process), chapter 16 for the voter process.
+CLI tool for the simulation of Interacting Particle Systems. For a theoretical background, see e.g., Stochastic Modeling by Lanchier (2017), chapter 14 for a general introduction, chapter 15 for the contact process (here called the SI process), chapter 16 for the voter process. The simulation algorithm is a generalization of §17.4, Programs 12 and 13 in Lanchier. For a more advanced (measure-theoretic) monograph, see Liggett (1985).
 
 ## Quick usage:
 
