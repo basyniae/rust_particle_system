@@ -299,7 +299,7 @@ fn main() {
         panic!("Halting condition not recognized!")
     }
 
-    // Make initial condition from provided arguments
+    // Make record condition from provided arguments
     let mut record_condition = RecordCondition::Final();
 
     if matches.is_present("record-final") {

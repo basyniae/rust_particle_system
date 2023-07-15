@@ -95,7 +95,7 @@ impl Graph for GridND {
         let mut neighbors: HashSet<usize> = HashSet::new();
 
         for (dimension_index, step_size) in self.step_sizes.iter().enumerate() {
-            let current_dimension = self.dimensions.get(dimension_index).unwrap();
+            let current_dimension = self.dimensions[dimension_index];
             // the coordinate of the point in the current dimension
             let current_coordinate = particle / step_size % current_dimension;
 
@@ -105,7 +105,7 @@ impl Graph for GridND {
                 // now only the + is valid
                 neighbors.insert(particle + step_size);
 
-                if *self.glue.get(dimension_index).unwrap() { // If this dimension is cyclic, loop around
+                if self.glue[dimension_index] { // If this dimension is cyclic, loop around
                     neighbors.insert(particle + step_size * current_dimension - step_size);
                 }
             } else if current_coordinate == current_dimension - 1 {
@@ -114,7 +114,7 @@ impl Graph for GridND {
                 // now only the - is valid
                 neighbors.insert(particle - step_size);
 
-                if *self.glue.get(dimension_index).unwrap() { // if this dimension is cyclic, loop around
+                if self.glue[dimension_index] { // if this dimension is cyclic, loop around
                     neighbors.insert(particle + step_size - step_size * current_dimension);
                 }
             } else {
